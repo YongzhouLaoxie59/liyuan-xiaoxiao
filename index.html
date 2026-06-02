@@ -1,0 +1,2899 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>梨园消消 - 京剧三消手游</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #1a0a0a;
+  display:flex; justify-content:center; align-items:center;
+  min-height:100vh; font-family:'STSong','SimSun','KaiTi',serif;
+  overflow:hidden;
+}
+#container {
+  width:420px; height:820px; position:relative;
+  background: linear-gradient(180deg, #2d1a0a 0%, #4a2010 30%, #3a1808 100%);
+  border:4px solid #8B6914; border-radius:16px;
+  box-shadow: 0 0 60px rgba(255,180,0,0.3), inset 0 0 100px rgba(0,0,0,0.5);
+  overflow:hidden;
+}
+.curtain-top {
+  position:absolute; top:0; left:0; right:0; height:10px;
+  background: linear-gradient(180deg, #8B0000, #a01010, #8B0000);
+  z-index:10; border-radius:16px 16px 0 0;
+}
+.curtain-left, .curtain-right {
+  position:absolute; top:10px; width:12px; bottom:0;
+  background: linear-gradient(90deg, #6B0000, #8B0000, #6B0000);
+  z-index:9;
+}
+.curtain-left { left:0; border-radius:0 0 0 12px; }
+.curtain-right { right:0; border-radius:0 0 12px 0; }
+#header {
+  position:absolute; top:14px; left:16px; right:16px; height:60px;
+  display:flex; align-items:center; justify-content:space-between;
+  z-index:5;
+}
+#title-area { text-align:center; flex:1; }
+#title-area h1 { font-size:26px; color:#FFD700; text-shadow: 2px 2px 4px #000; letter-spacing:4px; }
+#title-area .subtitle { font-size:10px; color:#c8a860; letter-spacing:2px; }
+#score-box {
+  background: linear-gradient(180deg, #5a2010, #3a1008);
+  border:2px solid #8B6914; border-radius:10px; padding:5px 12px; text-align:center;
+  min-width:68px;
+}
+#score-box .label { font-size:10px; color:#c8a860; }
+#score-box .value { font-size:20px; color:#FFD700; font-weight:bold; }
+#level-bar {
+  position:absolute; top:92px; left:20px; right:20px;
+  display:flex; align-items:center; justify-content:space-between;
+  z-index:5;
+}
+#level-info { font-size:12px; color:#FFD700; letter-spacing:1px; }
+#mask-info { font-size:12px; color:#c8a860; letter-spacing:1px; }
+#board-area {
+  position:absolute; top:110px; left:50%; transform:translateX(-50%);
+  width:384px; height:384px;
+  background: linear-gradient(135deg, #2a1508, #1a0a04);
+  border:3px solid #8B6914; border-radius:8px;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+}
+#gameCanvas { display:block; width:384px; height:384px; cursor:pointer; border-radius:6px; }
+#message {
+  position:absolute; top:514px; left:50%; transform:translateX(-50%);
+  font-size:15px; color:#FFD700; font-weight:bold;
+  text-shadow: 0 0 10px rgba(255,180,0,0.8);
+  z-index:20; pointer-events:none; opacity:0;
+  transition: opacity 0.3s; text-align:center; width:340px;
+}
+#message.show { opacity:1; }
+#energy-area { position:absolute; top:550px; left:28px; right:28px; z-index:5; }
+#energy-label { font-size:11px; color:#c8a860; margin-bottom:4px; display:flex; justify-content:space-between; }
+#energy-bar-bg { height:16px; background:#1a0a04; border:2px solid #8B6914; border-radius:8px; overflow:hidden; }
+#energy-bar-fill {
+  height:100%; width:0%;
+  background: linear-gradient(90deg, #FFD700, #FFA500);
+  border-radius:6px; transition: width 0.3s;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);
+}
+#skills-area {
+  position:absolute; top:580px; left:14px; right:14px;
+  display:flex; justify-content:space-between; gap:5px; z-index:5;
+}
+.skill-btn {
+  flex:1; height:72px;
+  background: linear-gradient(180deg, #5a2010, #3a1008);
+  border:2px solid #5a4020; border-radius:10px;
+  cursor:pointer; color:#FFD700; font-size:10px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  position:relative; transition: all 0.2s;
+  user-select:none; -webkit-tap-highlight-color:transparent; gap:2px;
+}
+.skill-btn canvas { width:38px; height:38px; }
+.skill-btn:hover { border-color:#FFD700; background: linear-gradient(180deg, #6a2810, #4a1808); }
+.skill-btn.skill-selected { border-color:#FF4444; box-shadow:0 0 20px rgba(255,0,0,0.6); transform:scale(1.06); }
+.skill-btn.disabled { opacity:0.4; pointer-events:none; }
+.skill-btn .skill-name { font-size:10px; color:#c8a860; }
+.skill-btn .skill-cost { font-size:9px; color:#888; }
+#bottom-area {
+  position:absolute; bottom:14px; left:10px; right:10px;
+  display:flex; justify-content:center; gap:10px; z-index:5;
+}
+.ctrl-btn {
+  padding:9px 18px; font-size:13px; font-family:inherit;
+  background: linear-gradient(180deg, #8B6914, #6B4904);
+  border:2px solid #FFD700; border-radius:20px;
+  color:#1a0a0a; font-weight:bold; cursor:pointer;
+  letter-spacing:2px; transition:all 0.2s;
+}
+.ctrl-btn:hover { background: linear-gradient(180deg, #FFD700, #c8a860); }
+.ctrl-btn:active { transform:scale(0.95); }
+.ctrl-btn.reshuffle-btn {
+  background: linear-gradient(180deg, #4a2090, #3a1070);
+  border-color:#a060ff;
+}
+.ctrl-btn.reshuffle-btn.ad-needed {
+  background: linear-gradient(180deg, #cc4400, #993300);
+  border-color:#ff8800;
+}
+.ctrl-btn:disabled { opacity:0.45; pointer-events:none; cursor:default; }
+.combo-popup {
+  position:absolute; pointer-events:none; z-index:30;
+  font-size:18px; font-weight:bold; animation: floatUp 1s ease-out forwards;
+}
+@keyframes floatUp {
+  0% { opacity:1; transform:translateY(0) scale(1); }
+  100% { opacity:0; transform:translateY(-70px) scale(1.4); }
+}
+@media (max-width:440px) {
+  #container { width:100vw; height:100vh; border-radius:0; border:none; }
+  #level-bar { top:88px; }
+  #board-area { width:92vw; height:92vw; top:120px; }
+  #gameCanvas { width:92vw; height:92vw; }
+  #message { top:calc(120px + 92vw + 12px); }
+  #energy-area { top:calc(120px + 92vw + 44px); }
+  #skills-area { top:calc(120px + 92vw + 76px); }
+}
+#toast {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  z-index:50; pointer-events:none; opacity:0;
+  font-size:32px; font-weight:bold; letter-spacing:4px;
+  text-shadow: 0 0 30px rgba(255,215,0,0.8); transition:all 0.5s;
+  text-align:center; line-height:1.4;
+}
+#toast.show { opacity:1; }
+#toast.win { color:#FFD700; }
+#toast.lose { color:#FF4444; }
+/* ===== 过关遮罩 ===== */
+#overlay {
+  display:none; position:absolute; top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.7); z-index:60;
+  flex-direction:column; align-items:center; justify-content:center; gap:16px;
+}
+#overlay.show { display:flex; }
+#overlay h2 { font-size:28px; color:#FFD700; letter-spacing:4px; text-shadow:0 0 20px gold; }
+#overlay p { font-size:16px; color:#c8a860; }
+#overlay .big-score { font-size:36px; color:#FFD700; font-weight:bold; }
+.overlay-btn {
+  padding:12px 36px; font-size:16px; font-family:inherit;
+  background: linear-gradient(180deg, #FFD700, #c8a860);
+  border:none; border-radius:24px; color:#1a0a0a; font-weight:bold;
+  cursor:pointer; letter-spacing:2px;
+}
+.overlay-btn-secondary {
+  padding:8px 24px; font-size:13px; font-family:inherit;
+  background:transparent; border:2px solid #c8a860; border-radius:20px;
+  color:#c8a860; cursor:pointer; letter-spacing:1px;
+}
+/* ===== 重排弹窗 ===== */
+#reshuffle-modal {
+  display:none; position:absolute; top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.8); z-index:65;
+  flex-direction:column; align-items:center; justify-content:center; gap:12px;
+}
+#reshuffle-modal.show { display:flex; }
+#reshuffle-modal h3 { font-size:20px; color:#FFD700; text-align:center; letter-spacing:2px; }
+#reshuffle-modal p { font-size:14px; color:#c8a860; text-align:center; max-width:280px; }
+#reshuffle-modal .ad-btn {
+  padding:10px 28px; font-size:14px; font-family:inherit;
+  background: linear-gradient(180deg, #ff6600, #cc4400);
+  border:2px solid #ffaa00; border-radius:22px;
+  color:#fff; font-weight:bold; cursor:pointer; letter-spacing:1px;
+}
+#reshuffle-modal .free-btn {
+  padding:10px 28px; font-size:14px; font-family:inherit;
+  background: linear-gradient(180deg, #4a2090, #3a1070);
+  border:2px solid #a060ff; border-radius:22px;
+  color:#fff; font-weight:bold; cursor:pointer; letter-spacing:1px;
+}
+#reshuffle-modal .skip-btn {
+  padding:8px 20px; font-size:12px; font-family:inherit;
+  background:transparent; border:1px solid #666; border-radius:16px;
+  color:#888; cursor:pointer;
+}
+/* ===== 开场大幕动画 ===== */
+#stage-curtain {
+  display:none; position:absolute; top:0;left:0;right:0;bottom:0;
+  z-index:80; pointer-events:none; overflow:hidden;
+}
+#stage-curtain.active { display:block; pointer-events:all; }
+.curtain-panel {
+  position:absolute; top:0; bottom:0; width:50%;
+  background: linear-gradient(180deg, #6B0000 0%, #8B1010 20%, #9B1515 50%, #7B0808 80%, #5B0000 100%);
+  transition: transform 0.0s;
+}
+.curtain-panel::before {
+  content:''; position:absolute; top:0; bottom:0; width:8px;
+  background: linear-gradient(180deg, #FFD700, #c8a860, #FFD700, #c8a860);
+  background-size:100% 40px;
+}
+#curtain-left  { left:0;  }
+#curtain-right { right:0; }
+#curtain-left::before  { right:0; }
+#curtain-right::before { left:0; }
+#curtain-title {
+  position:absolute; top:50%; left:0; right:0;
+  transform:translateY(-50%);
+  text-align:center; pointer-events:none; opacity:0;
+  transition:opacity 0.5s;
+}
+#curtain-title .ct-level { font-size:14px; color:#c8a860; letter-spacing:3px; margin-bottom:8px; }
+#curtain-title .ct-main  { font-size:32px; color:#FFD700; letter-spacing:6px; text-shadow:0 0 30px gold, 2px 2px 4px #000; }
+#curtain-title .ct-sub   { font-size:14px; color:#FFD700; letter-spacing:2px; margin-top:6px; opacity:0.8; }
+/* ===== 京剧知识卡弹窗 ===== */
+#knowledge-card {
+  display:none; position:absolute; top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.85); z-index:70;
+  flex-direction:column; align-items:center; justify-content:center;
+}
+#knowledge-card.show { display:flex; }
+.kc-box {
+  width:370px; max-height:740px;
+  background: linear-gradient(180deg, #2d1a0a, #4a2010);
+  border:3px solid #8B6914; border-radius:16px; overflow:hidden;
+  display:flex; flex-direction:column;
+}
+.kc-header {
+  background: linear-gradient(90deg, #6B0000, #8B1010);
+  padding:10px 16px; display:flex; align-items:center; gap:10px;
+}
+.kc-avatar { width:52px; height:52px; border-radius:50%; border:2px solid #c8a860; object-fit:cover; background:#1a0a00; }
+.kc-header-text .kc-role { font-size:11px; color:#c8a860; }
+.kc-header-text .kc-name { font-size:18px; color:#FFD700; font-weight:bold; letter-spacing:2px; }
+.kc-body { padding:14px 16px 6px; flex:1; overflow-y:auto; }
+.kc-intro { font-size:13px; color:#e8d0a0; line-height:1.8; margin-bottom:12px; }
+.kc-fact { display:flex; gap:6px; margin-bottom:6px; }
+.kc-fact-label { font-size:11px; color:#FFD700; white-space:nowrap; padding-top:1px; }
+.kc-fact-value { font-size:12px; color:#c8a860; line-height:1.6; }
+/* 视频区 */
+.kc-video-area {
+  margin-top:10px; padding:10px 14px;
+  background:rgba(0,0,0,0.3); border-radius:8px; border:1px solid #5a4020;
+}
+.kc-video-title { font-size:11px; color:#FFD700; margin-bottom:6px; }
+.kc-video-desc  { font-size:11px; color:#c8a860; margin-bottom:8px; line-height:1.5; }
+.kc-video-url {
+  font-size:11px; color:#a0a0a0; font-family:monospace;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  max-width:240px; display:inline-block;
+  vertical-align:middle; user-select:all;
+}
+.kc-copy-btn {
+  font-size:11px; color:#FFD700; background:none; border:1px solid #FFD700;
+  border-radius:10px; padding:2px 10px; cursor:pointer; font-family:inherit;
+  line-height:1.4;
+}
+.kc-copy-btn:hover { background:#FFD700; color:#1a0a00; }
+.kc-copy-btn.copied { color:#0f0; border-color:#0f0; }
+/* 语言选择器 */
+.kc-lang-bar {
+  padding:8px 16px 10px; display:flex; gap:6px; justify-content:center;
+  border-top:1px solid #5a4020;
+}
+.kc-lang-btn {
+  padding:4px 12px; font-size:11px; font-family:inherit;
+  background:transparent; border:1px solid #666; border-radius:14px;
+  color:#999; cursor:pointer; transition:all 0.2s;
+}
+.kc-lang-btn.active {
+  background:#8B6914; border-color:#FFD700; color:#FFD700; font-weight:bold;
+}
+.kc-lang-btn:hover { border-color:#c8a860; color:#c8a860; }
+/* 考核评级区 */
+.kc-rating {
+  margin:0 16px; padding:10px 14px; border-top:1px solid rgba(255,215,0,0.15);
+  border-bottom:1px solid rgba(255,215,0,0.15);
+  text-align:center;
+}
+.kc-rating-stars { font-size:22px; letter-spacing:4px; margin-bottom:4px; }
+.kc-rating-grade { font-size:14px; font-weight:bold; margin-bottom:6px; }
+.kc-rating-grade.gold { color:#FFD700; }
+.kc-rating-grade.silver { color:#C0C0C0; }
+.kc-rating-grade.bronze { color:#CD7F32; }
+.kc-rating-compare { display:flex; justify-content:center; gap:24px; font-size:11px; color:#a0a0a0; }
+.kc-rating-compare .rc-item { text-align:center; }
+.kc-rating-compare .rc-label { font-size:10px; color:#888; }
+.kc-rating-compare .rc-val { font-size:13px; color:#FFD700; }
+.kc-rating-compare .rc-best { font-size:11px; color:#888; }
+.kc-rating-compare .rc-beat { color:#0f0; font-size:16px; }
+.kc-rating-compare .rc-lose { color:#f60; font-size:16px; }
+.kc-footer { padding:10px 14px 14px; display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap; }
+.kc-footer .overlay-btn { font-size:14px; padding:10px 22px; }
+.kc-footer .overlay-btn-secondary { font-size:13px; padding:8px 14px; white-space:nowrap; }
+/* 主界面语言栏 */
+#ui-lang-bar {
+  position:absolute; top:652px; left:20px; right:20px;
+  display:flex; gap:6px; justify-content:center; z-index:5;
+}
+.ui-lang-btn {
+  padding:3px 10px; font-size:10px; font-family:inherit;
+  background:transparent; border:1px solid #555; border-radius:12px;
+  color:#999; cursor:pointer; transition:all 0.2s;
+}
+.ui-lang-btn.active {
+  background:#8B6914; border-color:#FFD700; color:#FFD700; font-weight:bold;
+}
+.ui-lang-btn:hover { border-color:#c8a860; color:#c8a860; }
+
+</style>
+</head>
+<body>
+<div id="container">
+  <div class="curtain-top"></div>
+  <div class="curtain-left"></div>
+  <div class="curtain-right"></div>
+
+  <div id="header">
+    <div id="score-box">
+      <div class="label">分 数</div>
+      <div class="value" id="score">0</div>
+    </div>
+    <div id="title-area">
+      <h1>梨园消消</h1>
+      <div class="subtitle">京剧三消</div>
+    </div>
+    <div id="score-box">
+      <div class="label">步 数</div>
+      <div class="value" id="step-count" style="color:#FFD700;font-size:16px;">0</div>
+    </div>
+  </div>
+
+  <div id="level-bar">
+    <div id="level-info">第 1 关　初入梨园</div>
+    <div id="mask-info">还需消除：0/64</div>
+  </div>
+
+  <div id="board-area">
+    <canvas id="gameCanvas" width="768" height="768"></canvas>
+  </div>
+
+  <div id="message"></div>
+
+  <div id="energy-area">
+    <div id="energy-label"><span>锣鼓能量</span><span id="energy-text">0/100</span></div>
+    <div id="energy-bar-bg"><div id="energy-bar-fill"></div></div>
+  </div>
+
+  <div id="skills-area">
+    <button class="skill-btn" data-skill="sheng" onclick="selectSkill('sheng')">
+      <canvas id="icon-sheng" width="76" height="76"></canvas>
+      <span class="skill-name">生·横扫</span><span class="skill-cost">30能量</span>
+    </button>
+    <button class="skill-btn" data-skill="dan" onclick="selectSkill('dan')">
+      <canvas id="icon-dan" width="76" height="76"></canvas>
+      <span class="skill-name">旦·轻拂</span><span class="skill-cost">30能量</span>
+    </button>
+    <button class="skill-btn" data-skill="jing" onclick="selectSkill('jing')">
+      <canvas id="icon-jing" width="76" height="76"></canvas>
+      <span class="skill-name">净·震天</span><span class="skill-cost">30能量</span>
+    </button>
+    <button class="skill-btn" data-skill="mo" onclick="selectSkill('mo')">
+      <canvas id="icon-mo" width="76" height="76"></canvas>
+      <span class="skill-name">末·点兵</span><span class="skill-cost">30能量</span>
+    </button>
+    <button class="skill-btn" data-skill="chou" onclick="selectSkill('chou')">
+      <canvas id="icon-chou" width="76" height="76"></canvas>
+      <span class="skill-name">丑·逗趣</span><span class="skill-cost">30能量</span>
+    </button>
+  </div>
+
+  <div id="bottom-area">
+    <button class="ctrl-btn" onclick="resetLevel()">重新开局</button>
+    <button class="ctrl-btn" onclick="cancelSkill()">取消技能</button>
+    <button class="ctrl-btn reshuffle-btn" id="manual-reshuffle-btn" onclick="manualReshuffle()">重排棋盘</button>
+  </div>
+
+  <!-- 主界面语言选择 -->
+  <div id="ui-lang-bar">
+    <button class="ui-lang-btn active" data-lang="zh" onclick="switchUiLang('zh')">中 文</button>
+    <button class="ui-lang-btn" data-lang="en" onclick="switchUiLang('en')">English</button>
+    <button class="ui-lang-btn" data-lang="ja" onclick="switchUiLang('ja')">日本語</button>
+    <button class="ui-lang-btn" data-lang="ko" onclick="switchUiLang('ko')">한국어</button>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- 过关/失败遮罩 -->
+  <div id="overlay">
+    <h2 id="overlay-title">满堂彩！</h2>
+    <p id="overlay-desc">第1关通过</p>
+    <div class="big-score" id="overlay-score">得分：0</div>
+    <button class="overlay-btn" id="overlay-btn" onclick="nextAction()">下一关</button>
+    <button class="overlay-btn-secondary" id="overlay-kc-btn" onclick="showKnowledgeCard()" style="display:none">🎭 查看京剧知识卡</button>
+  </div>
+
+  <!-- 重排弹窗 -->
+  <div id="reshuffle-modal">
+    <h3 id="reshuffle-title">棋盘无路可走！</h3>
+    <p id="reshuffle-desc">剩余脸谱：0 个</p>
+    <button class="free-btn" id="reshuffle-free-btn" onclick="doReshuffle(false)">免费重排</button>
+    <button class="ad-btn" id="reshuffle-ad-btn" onclick="doReshuffle(true)" style="display:none">📺 看广告重排</button>
+    <button class="skip-btn" onclick="closeReshuffleModal()">不重排，结束此关</button>
+  </div>
+
+  <!-- 开场大幕 -->
+  <div id="stage-curtain">
+    <div id="curtain-left"  class="curtain-panel"></div>
+    <div id="curtain-right" class="curtain-panel"></div>
+    <div id="curtain-title">
+      <div class="ct-level" id="ct-level-text">第 1 关</div>
+      <div class="ct-main"  id="ct-main-text">初入梨园</div>
+      <div class="ct-sub" id="ct-sub-text">需消除：64 个脸谱</div>
+    </div>
+  </div>
+
+  <!-- 京剧知识卡 -->
+  <div id="knowledge-card">
+    <div class="kc-box">
+      <div class="kc-header">
+        <img class="kc-avatar" id="kc-avatar" src="" alt="行当头像">
+        <div class="kc-header-text">
+          <div class="kc-role" id="kc-role">生行</div>
+          <div class="kc-name" id="kc-name">小生与老生</div>
+        </div>
+      </div>
+      <div class="kc-body">
+        <div class="kc-intro" id="kc-intro">加载中…</div>
+        <div id="kc-facts"></div>
+        <div class="kc-video-area" id="kc-video-area">
+          <div class="kc-video-title">🎬 经典名段欣赏</div>
+          <div class="kc-video-desc" id="kc-video-desc">加载中…</div>
+        </div>
+      </div>
+      <div class="kc-lang-bar" id="kc-lang-bar">
+        <button class="kc-lang-btn active" data-lang="zh" onclick="switchKcLang('zh')">中 文</button>
+        <button class="kc-lang-btn" data-lang="en" onclick="switchKcLang('en')">English</button>
+        <button class="kc-lang-btn" data-lang="ja" onclick="switchKcLang('ja')">日本語</button>
+        <button class="kc-lang-btn" data-lang="ko" onclick="switchKcLang('ko')">한국어</button>
+      </div>
+      <!-- 考核评级 -->
+      <div class="kc-rating" id="kc-rating">
+        <div class="kc-rating-stars" id="kc-rating-stars">★★★</div>
+        <div class="kc-rating-grade" id="kc-rating-grade">金牌·一流身手</div>
+        <div class="kc-rating-compare">
+          <div class="rc-item">
+            <div class="rc-label">你的得分</div>
+            <div class="rc-val" id="rc-my-score">0</div>
+            <div class="rc-best">最佳 <span id="rc-best-score">0</span></div>
+          </div>
+          <div class="rc-item">
+            <div class="rc-label">你的步数</div>
+            <div class="rc-val" id="rc-my-steps">0</div>
+            <div class="rc-best">最佳 <span id="rc-best-steps">0</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="kc-footer">
+        <span class="kc-video-label">📺</span>
+        <span class="kc-video-url" id="kc-video-url">加载中…</span>
+        <button class="kc-copy-btn" id="kc-copy-btn" onclick="copyVideoUrl()">复制链接</button>
+        <button class="overlay-btn" id="kc-next-btn" onclick="closeKcAndNext()">下一关 ▶</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================== 关卡配置（脸谱消除制） ========================
+const LEVELS = [
+  { level: 1, masksTarget: 64,  title:'初入梨园' },
+  { level: 2, masksTarget: 72,  title:'闺门初启' },
+  { level: 3, masksTarget: 80,  title:'花脸震天' },
+  { level: 4, masksTarget: 90,  title:'苍髯老生' },
+  { level: 5, masksTarget: 101, title:'丑角逗趣' },
+  { level: 6, masksTarget: 113, title:'脸谱探秘' },
+  { level: 7, masksTarget: 126, title:'四大名旦' },
+  { level: 8, masksTarget: 142, title:'老生流派' },
+  { level: 9, masksTarget: 159, title:'文武场面' },
+  { level:10, masksTarget: 178, title:'锦绣行头' },
+  { level:11, masksTarget: 199, title:'手眼身法' },
+  { level:12, masksTarget: 223, title:'名剧荟萃' },
+  { level:13, masksTarget: 250, title:'京剧西行' },
+  { level:14, masksTarget: 280, title:'古今新韵' },
+  { level:15, masksTarget: 313, title:'梨园薪火' },
+];
+
+// ======================== 各关最佳记录（分数/步数基准） ========================
+// bestScore ≈ masksTarget × 7.5, bestSteps ≈ masksTarget ÷ 4.2
+const BEST_RECORDS = [
+  { score:480, steps:16 },
+  { score:540, steps:18 },
+  { score:600, steps:20 },
+  { score:680, steps:22 },
+  { score:760, steps:24 },
+  { score:850, steps:27 },
+  { score:950, steps:30 },
+  { score:1060, steps:34 },
+  { score:1200, steps:38 },
+  { score:1340, steps:43 },
+  { score:1500, steps:48 },
+  { score:1680, steps:53 },
+  { score:1880, steps:60 },
+  { score:2100, steps:67 },
+  { score:2350, steps:75 }
+];
+
+let currentLevel = 0;
+let overlayAction = 'next';
+
+// ======================== 五大行当脸谱配置 ========================
+const ROLES = [
+  { id:0, name:'生', title:'小生', skill:'横扫', baseColor:'#F5C0A0', accentColor:'#E85520', pattern:'sheng', img:'sheng.png' },
+  { id:1, name:'旦', title:'青衣', skill:'轻拂', baseColor:'#FDE8E0', accentColor:'#FF2255', pattern:'dan', img:'dan.png' },
+  { id:2, name:'净', title:'花脸', skill:'震天', baseColor:'#CC2800', accentColor:'#000000', pattern:'jing', img:'jing.png' },
+  { id:3, name:'末', title:'老生', skill:'点兵', baseColor:'#C8954A', accentColor:'#333333', pattern:'mo', img:'mo.png' },
+  { id:4, name:'丑', title:'文丑', skill:'逗趣', baseColor:'#F0C060', accentColor:'#CC2200', pattern:'chou', img:'chou.png' }
+];
+
+// ======================== 棋子绘制 ========================
+function drawFaceMask(ctx2d, cx, cy, r, role, selected, typeId) {
+  ctx2d.save();
+  const rr = r * 0.78;
+  const img = (typeId !== undefined) ? roleImages[typeId] : null;
+  if (img && imagesReady) {
+    ctx2d.drawImage(img, cx - rr, cy - rr, rr * 2, rr * 2);
+    if (selected) {
+      ctx2d.strokeStyle = '#FFD700'; ctx2d.lineWidth = 3;
+      ctx2d.shadowColor = '#FFD700'; ctx2d.shadowBlur = 16;
+      ctx2d.beginPath(); ctx2d.arc(cx, cy, rr + 2, 0, Math.PI*2); ctx2d.stroke();
+      ctx2d.shadowBlur = 0;
+    }
+  } else {
+    const g = ctx2d.createRadialGradient(cx - rr*0.15, cy - rr*0.2, rr*0.05, cx, cy, rr*1.05);
+    g.addColorStop(0, lightenHex(role.baseColor, 0.30));
+    g.addColorStop(0.5, role.baseColor);
+    g.addColorStop(1, darkenHex(role.baseColor, 0.20));
+    ctx2d.fillStyle = g; ctx2d.beginPath(); ctx2d.arc(cx, cy, rr, 0, Math.PI*2); ctx2d.fill();
+    ctx2d.strokeStyle = selected ? '#FFD700' : darkenHex(role.baseColor, 0.35);
+    ctx2d.lineWidth = selected ? 3 : 2;
+    ctx2d.beginPath(); ctx2d.arc(cx, cy, rr, 0, Math.PI*2); ctx2d.stroke();
+    const fontSize = r * 1.1;
+    ctx2d.fillStyle = role.accentColor;
+    ctx2d.font = 'bold ' + fontSize + 'px "KaiTi","SimSun","STSong",serif';
+    ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle';
+    ctx2d.shadowColor = 'rgba(0,0,0,0.6)'; ctx2d.shadowBlur = 3;
+    ctx2d.fillText(role.name, cx, cy); ctx2d.shadowBlur = 0;
+    if (selected) {
+      ctx2d.strokeStyle = '#FFD700'; ctx2d.lineWidth = 3;
+      ctx2d.shadowColor = '#FFD700'; ctx2d.shadowBlur = 16;
+      ctx2d.beginPath(); ctx2d.arc(cx, cy, rr + 3, 0, Math.PI*2); ctx2d.stroke();
+      ctx2d.shadowBlur = 0;
+    }
+  }
+  ctx2d.restore();
+}
+
+function lightenHex(hex, amt) {
+  var r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return 'rgb('+Math.min(255,r+amt*255|0)+','+Math.min(255,g+amt*255|0)+','+Math.min(255,b+amt*255|0)+')';
+}
+function darkenHex(hex, amt) {
+  var r=parseInt(hex.slice(1,3),16)||0, g=parseInt(hex.slice(3,5),16)||0, b=parseInt(hex.slice(5,7),16)||0;
+  return 'rgb('+Math.max(0,r-amt*255|0)+','+Math.max(0,g-amt*255|0)+','+Math.max(0,b-amt*255|0)+')';
+}
+
+function drawSkillIcons() {
+  ROLES.forEach(role => {
+    const cvs = document.getElementById('icon-' + role.pattern);
+    if (!cvs) return;
+    const c = cvs.getContext('2d');
+    c.clearRect(0, 0, 76, 76);
+    drawFaceMask(c, 38, 38, 30, role, false, role.id);
+  });
+}
+
+// ======================== 音效 ========================
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function sfxLuo() {
+  initAudio(); if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  [[120,1.0],[180,0.4],[240,0.2],[360,0.1]].forEach(([freq,gain]) => {
+    const osc=audioCtx.createOscillator(), g=audioCtx.createGain();
+    osc.type='sine'; osc.frequency.value=freq;
+    g.gain.setValueAtTime(gain*0.22,t); g.gain.exponentialRampToValueAtTime(0.001,t+1.2);
+    osc.connect(g); g.connect(audioCtx.destination); osc.start(t); osc.stop(t+1.2);
+  });
+  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.04,audioCtx.sampleRate);
+  const data=buf.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*(1-i/data.length);
+  const noise=audioCtx.createBufferSource(), ng=audioCtx.createGain(), bpf=audioCtx.createBiquadFilter();
+  ng.gain.value=0.15; bpf.type='bandpass'; bpf.frequency.value=300; bpf.Q.value=0.5;
+  noise.buffer=buf; noise.connect(bpf); bpf.connect(ng); ng.connect(audioCtx.destination); noise.start(t);
+}
+
+function sfxGu() {
+  initAudio(); if (!audioCtx) return;
+  const t=audioCtx.currentTime;
+  const osc=audioCtx.createOscillator(), g=audioCtx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(120,t); osc.frequency.exponentialRampToValueAtTime(45,t+0.08);
+  g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+  osc.connect(g); g.connect(audioCtx.destination); osc.start(t); osc.stop(t+0.5);
+  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.06,audioCtx.sampleRate);
+  const data=buf.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.exp(-i/(data.length*0.3));
+  const noise=audioCtx.createBufferSource(), ng=audioCtx.createGain(), lpf=audioCtx.createBiquadFilter();
+  ng.gain.value=0.3; lpf.type='lowpass'; lpf.frequency.value=200;
+  noise.buffer=buf; noise.connect(lpf); lpf.connect(ng); ng.connect(audioCtx.destination); noise.start(t);
+  setTimeout(()=>{
+    initAudio(); if (!audioCtx) return;
+    const t2=audioCtx.currentTime, o2=audioCtx.createOscillator(), g2=audioCtx.createGain();
+    o2.type='sine'; o2.frequency.setValueAtTime(100,t2); o2.frequency.exponentialRampToValueAtTime(40,t2+0.06);
+    g2.gain.setValueAtTime(0.35,t2); g2.gain.exponentialRampToValueAtTime(0.001,t2+0.4);
+    o2.connect(g2); g2.connect(audioCtx.destination); o2.start(t2); o2.stop(t2+0.4);
+  },120);
+}
+
+function sfxJinghu() {
+  initAudio(); if (!audioCtx) return;
+  const t=audioCtx.currentTime;
+  const osc=audioCtx.createOscillator(), g=audioCtx.createGain();
+  osc.type='sawtooth'; osc.frequency.setValueAtTime(440,t); osc.frequency.exponentialRampToValueAtTime(880,t+0.15); osc.frequency.exponentialRampToValueAtTime(660,t+0.5);
+  g.gain.setValueAtTime(0.0,t); g.gain.linearRampToValueAtTime(0.15,t+0.03); g.gain.exponentialRampToValueAtTime(0.001,t+0.7);
+  const hpf=audioCtx.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=300;
+  osc.connect(hpf); hpf.connect(g); g.connect(audioCtx.destination); osc.start(t); osc.stop(t+0.7);
+  [[880,0.08],[1320,0.05],[1760,0.03]].forEach(([freq,vol])=>{
+    const o=audioCtx.createOscillator(), gn=audioCtx.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(freq,t);
+    gn.gain.setValueAtTime(vol,t+0.03); gn.gain.exponentialRampToValueAtTime(0.001,t+0.6);
+    o.connect(gn); gn.connect(audioCtx.destination); o.start(t); o.stop(t+0.7);
+  });
+}
+
+function sfxSelect() {
+  initAudio(); if (!audioCtx) return;
+  const t=audioCtx.currentTime, o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type='sine'; o.frequency.value=800; g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.1);
+}
+
+function sfxSkill() {
+  initAudio(); if (!audioCtx) return;
+  const t=audioCtx.currentTime;
+  [220,330,440,550].forEach((freq,i)=>{
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sawtooth'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0.1,t+i*0.06); g.gain.exponentialRampToValueAtTime(0.001,t+i*0.06+0.3);
+    o.connect(g); g.connect(audioCtx.destination); o.start(t+i*0.06); o.stop(t+i*0.06+0.3);
+  });
+}
+
+function sfxFail() {
+  initAudio(); if (!audioCtx) return;
+  const t=audioCtx.currentTime, o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(300,t); o.frequency.exponentialRampToValueAtTime(150,t+0.3);
+  g.gain.setValueAtTime(0.08,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.35);
+}
+
+function sfxMatch(count) {
+  if (count>=5) sfxJinghu();
+  else if (count===4) sfxGu();
+  else sfxLuo();
+}
+
+function sfxReshuffle() {
+  initAudio(); if (!audioCtx) return;
+  const t=audioCtx.currentTime;
+  for(let i=0;i<6;i++){
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='triangle'; o.frequency.setValueAtTime(200+i*80,t+i*0.05);
+    g.gain.setValueAtTime(0.08,t+i*0.05); g.gain.exponentialRampToValueAtTime(0.001,t+i*0.05+0.25);
+    o.connect(g); g.connect(audioCtx.destination); o.start(t+i*0.05); o.stop(t+i*0.05+0.3);
+  }
+}
+
+// ======================== 开场锣鼓 ========================
+function sfxOpeningLuogu() {
+  initAudio(); if (!audioCtx) return;
+  const pattern = [
+    {type:'luo', delay:0.0},{type:'gu', delay:0.25},{type:'luo', delay:0.5},
+    {type:'gu', delay:0.7},{type:'luo', delay:0.95},{type:'gu', delay:1.1},
+    {type:'luo', delay:1.25},{type:'gu', delay:1.35},{type:'luo', delay:1.5},
+    {type:'luo', delay:1.65},{type:'gu', delay:1.75},
+  ];
+  pattern.forEach(({type, delay}) => {
+    setTimeout(() => { if(type==='luo') sfxLuo(); else sfxGu(); }, delay * 1000);
+  });
+}
+
+function playOpeningCurtain(levelIdx) {
+  try {
+    return new Promise(resolve => {
+      var lv = LEVELS[levelIdx];
+      var curtain = document.getElementById('stage-curtain');
+      var cl = document.getElementById('curtain-left');
+      var cr = document.getElementById('curtain-right');
+      var title = document.getElementById('curtain-title');
+      if (!curtain || !cl || !cr || !title) {
+        console.warn('[curtain] DOM elements missing, skip');
+        resolve(); return;
+      }
+      document.getElementById('ct-level-text').textContent = tf('level',[lv.level]);
+      document.getElementById('ct-main-text').textContent  = lv.title;
+      document.getElementById('ct-sub-text').textContent   = tf('needEliminate',[lv.masksTarget]);
+
+      cl.style.transition = 'none'; cr.style.transition = 'none';
+      cl.style.transform = 'translateX(0)'; cr.style.transform = 'translateX(0)';
+      title.style.opacity = '0';
+      curtain.classList.add('active');
+      sfxOpeningLuogu();
+      setTimeout(() => { title.style.opacity = '1'; }, 600);
+      setTimeout(() => {
+        cl.style.transition = 'transform 0.9s cubic-bezier(0.4,0,0.2,1)';
+        cr.style.transition = 'transform 0.9s cubic-bezier(0.4,0,0.2,1)';
+        cl.style.transform = 'translateX(-100%)';
+        cr.style.transform = 'translateX(100%)';
+        title.style.opacity = '0';
+      }, 1800);
+      setTimeout(() => {
+        try {
+          curtain.classList.remove('active');
+          cl.style.transition = 'none'; cr.style.transition = 'none';
+          resolve();
+        } catch(e) { resolve(); }
+      }, 2800);
+    });
+  } catch(e) {
+    console.error('[curtain] exception:', e);
+    return Promise.resolve();
+  }
+}
+
+// ======================== 京剧知识卡（多语种 + 视频外链） ========================
+// 支持语言：zh(中文) en(英语) ja(日语) ko(韩语)
+const KC_DATA = [
+  {
+    level: 1,
+    videoSrc: 'https://www.bilibili.com/video/BV1iQ4y1i7pp/',
+    text: {
+      zh: {
+        role: '生行', name: '生——文武须生',
+        intro: '「生」是京剧中的男性角色统称，分小生（青年）、老生（中年/老年）、武生（武将）三大类。老生是京剧第一主角，唱腔以真嗓为主，音色浑厚。',
+        facts: [
+          ['代表角色','诸葛亮（老生）、周瑜（小生）、武松（武生）'],
+          ['代表剧目','《空城计》《借东风》《打虎上山》'],
+          ['流派','老生四大流派：余（叔岩）派、马（连良）派、谭（鑫培）派、麒（麟童）派']
+        ],
+        videoDesc: '《空城计》选段·诸葛亮唱腔"我正在城楼观山景"，老生名段',
+        videoLabel: '观看《空城计》选段'
+      },
+      en: {
+        role: 'Sheng (Male)', name: 'Sheng - Civil & Martial',
+        intro: 'Sheng is the general term for male roles in Peking Opera, divided into Xiaosheng (young male), Laosheng (middle-aged/elderly male), and Wusheng (martial male). Laosheng is the leading role, singing with natural voice in a rich, powerful tone.',
+        facts: [
+          ['Notable Roles','Zhuge Liang (Laosheng), Zhou Yu (Xiaosheng), Wu Song (Wusheng)'],
+          ['Classic Plays','Empty City Strategy, Borrowing the East Wind, Tiger Mountain'],
+          ['Schools','Four major Laosheng schools: Yu, Ma, Tan, Qi']
+        ],
+        videoDesc: '"Empty City Strategy" excerpt - Zhuge Liang aria, a Laosheng masterpiece',
+        videoLabel: 'Watch "Empty City Strategy"'
+      },
+      ja: {
+        role: '生行（男性役）', name: '生——文武須生',
+        intro: '「生」は京劇における男性役の総称で、小生（若い男性）、老生（中年・老年男性）、武生（武人）の三種類。老生は京劇の主役で、地声による力強い歌唱が特徴。',
+        facts: [
+          ['代表的な役','諸葛亮（老生）、周瑜（小生）、武松（武生）'],
+          ['代表的な演目','『空城計』『借東風』『打虎上山』'],
+          ['流派','老生四大流派：余（叔岩）派、馬（連良）派、譚（鑫培）派、麒（麟童）派']
+        ],
+        videoDesc: '『空城計』より諸葛亮のアリア、老生の名場面',
+        videoLabel: '『空城計』を見る'
+      },
+      ko: {
+        role: '생(남성 역)', name: '생——문무 수염 역',
+        intro: '"생(生)"은 경극의 남성 역할 총칭으로, 소생(청년), 노생(중년/노년), 무생(무장)으로 나뉩니다. 노생은 경극의 주역으로 진성 창법을 사용하며 음색이 웅장합니다.',
+        facts: [
+          ['대표 역할','제갈량(노생), 주유(소생), 무송(무생)'],
+          ['대표 작품','『공성계』, 『차동풍』, 『타호상산』'],
+          ['유파','노생 4대 유파: 여(숙암)파, 마(연량)파, 담(흠배)파, 기(인동)파']
+        ],
+        videoDesc: '『공성계』 중 제갈량 아리아, 노생 명장면',
+        videoLabel: '『공성계』 감상하기'
+      }
+    }
+  },
+  {
+    level: 2,
+    videoSrc: 'https://www.bilibili.com/bangumi/play/ep367859',
+    text: {
+      zh: {
+        role: '旦行', name: '旦——闺门青衣',
+        intro: '「旦」是京剧中的女性角色，分青衣（正旦）、花旦、武旦、老旦、刀马旦等。青衣以唱为主，端庄大方；花旦以做表为主，活泼靓丽。梅兰芳先生是旦角的旷世奇才。',
+        facts: [
+          ['代表角色','白素贞（青衣）、杜丽娘（旦）、穆桂英（刀马旦）'],
+          ['代表剧目','《贵妃醉酒》《霸王别姬》《白蛇传》'],
+          ['特点','旦角唱腔用假嗓，音色清亮婉转，身段讲究水袖功夫']
+        ],
+        videoDesc: '《贵妃醉酒》选段·梅兰芳先生代表作，旦角唱腔典范',
+        videoLabel: '观看《贵妃醉酒》选段'
+      },
+      en: {
+        role: 'Dan (Female)', name: 'Dan - Graceful Qingyi',
+        intro: 'Dan refers to female roles in Peking Opera, including Qingyi (virtuous woman), Huadan (vivacious maiden), Wudan (martial woman), Laodan (elderly woman), and Daomadan (female warrior). Mei Lanfang is the unparalleled master of Dan roles.',
+        facts: [
+          ['Notable Roles','Bai Suzhen (Qingyi), Du Liniang (Dan), Mu Guiying (Daomadan)'],
+          ['Classic Plays','The Drunken Concubine, Farewell My Concubine, Legend of the White Snake'],
+          ['Features','Dan singing uses falsetto, with clear, melodious tone and graceful water-sleeve techniques']
+        ],
+        videoDesc: '"The Drunken Concubine" excerpt - Mei Lanfang masterpiece, Dan role classic',
+        videoLabel: 'Watch "The Drunken Concubine"'
+      },
+      ja: {
+        role: '旦行（女性役）', name: '旦——閨門青衣',
+        intro: '「旦」は京劇の女性役で、青衣（正旦）、花旦、武旦、老旦、刀馬旦に分類。青衣は歌唱中心で端正優雅、花旦は演技中心で活発華麗。梅蘭芳は旦役の天才的名人。',
+        facts: [
+          ['代表的な役','白素貞（青衣）、杜麗娘（旦）、穆桂英（刀馬旦）'],
+          ['代表的な演目','『貴妃酔酒』『霸王別姫』『白蛇伝』'],
+          ['特徴','旦役は裏声を用い、清らかで美しい声。水袖の技法が重要']
+        ],
+        videoDesc: '『貴妃酔酒』より梅蘭芳の代表作、旦役の名場面',
+        videoLabel: '『貴妃酔酒』を見る'
+      },
+      ko: {
+        role: '단(여성 역)', name: '단——규문 청의',
+        intro: '"단(旦)"은 경극의 여성 역할로 청의(정단), 화단, 무단, 노단, 도마단으로 분류됩니다. 청의는 노래 중심으로 단정하고 우아하며, 화단은 연기 중심으로 활발하고 화려합니다. 매란방은 단역의 천재적 명인입니다.',
+        facts: [
+          ['대표 역할','백소정(청의), 두여랑(단), 목계영(도마단)'],
+          ['대표 작품','『귀비취주』, 『패왕별희』, 『백사전』'],
+          ['특징','가성 창법으로 청량하고 아름다우며, 수수(물소매) 기교가 중요']
+        ],
+        videoDesc: '『귀비취주』 중 매란방 대표작, 단역 명장면',
+        videoLabel: '『귀비취주』 감상하기'
+      }
+    }
+  },
+  {
+    level: 3,
+    videoSrc: 'https://www.bilibili.com/video/BV1UvLh6CEv8/',
+    text: {
+      zh: {
+        role: '净行', name: '净——铜锤花脸',
+        intro: '「净」俗称「花脸」，是京剧中个性最鲜明的行当，以脸谱图案闻名于世。净行角色多是大将、权臣，嗓音浑厚宽亮，以唱做并重，气势磅礴。',
+        facts: [
+          ['脸谱含义','红脸忠义（关羽）、黑脸刚直（张飞/包拯）、白脸奸诈（曹操）、蓝脸威猛（窦尔敦）'],
+          ['代表剧目','《铡美案》《探阴山》《霸王别姬》（项羽）'],
+          ['分类','铜锤花脸（以唱为主）、架子花脸（以做工为主）']
+        ],
+        videoDesc: '《铡美案》选段·包公唱腔"包龙图打坐在开封府"，净角代表作',
+        videoLabel: '观看《铡美案》选段'
+      },
+      en: {
+        role: 'Jing (Painted Face)', name: 'Jing - Painted Face Hero',
+        intro: 'Jing, commonly called "Painted Face", is the most distinctive role type in Peking Opera, famous for facial makeup patterns. Jing roles are typically generals or powerful ministers, with powerful, resonant voices.',
+        facts: [
+          ['Face Colors','Red=loyalty (Guan Yu), Black=uprightness (Zhang Fei/Bao Zheng), White=treachery (Cao Cao), Blue=fierceness (Dou Erdun)'],
+          ['Classic Plays','The Case of Executing Chen Shimei, Exploring Yin Mountain, Farewell My Concubine (Xiang Yu)'],
+          ['Types','Bronze Hammer Jing (singing-focused), Frame Jing (acting-focused)']
+        ],
+        videoDesc: '"The Case of Executing Chen Shimei" excerpt - Judge Bao aria, Jing role classic',
+        videoLabel: 'Watch "Executing Chen Shimei"'
+      },
+      ja: {
+        role: '净行（隈取役）', name: '净——銅槌花脸',
+        intro: '「净」は通称「花脸（隈取）」、京劇で最も個性的な役柄。隈取模様で世界的に有名。浄役は大将や権臣が多く、太く力強い声で歌唱と演技の両方を重視。',
+        facts: [
+          ['隈取の色','赤＝忠義（関羽）、黒＝剛直（張飛/包拯）、白＝奸詐（曹操）、青＝勇猛（竇爾敦）'],
+          ['代表的な演目','『鍘美案』『探陰山』『霸王別姫』（項羽）'],
+          ['分類','銅槌花脸（歌唱中心）、架子花脸（演技中心）']
+        ],
+        videoDesc: '『鍘美案』より包拯のアリア、浄役の代表作',
+        videoLabel: '『鍘美案』を見る'
+      },
+      ko: {
+        role: '정(얼굴 분장 역)', name: '정——동추 화검',
+        intro: '"정(净)"은 속칭 "화검(花脸)"으로 경극에서 가장 개성 있는 역할로, 얼굴 분장 문양으로 세계적으로 유명합니다. 정 역은 주로 대장군이나 권신으로, 굵고 힘찬 목소리가 특징입니다.',
+        facts: [
+          ['분장 색상','빨강=충의(관우), 검정=강직(장비/포증), 흰색=간사(조조), 파랑=용맹(두이돈)'],
+          ['대표 작품','『측미안』, 『탐음산』, 『패왕별희』(항우)'],
+          ['분류','동추화검(노래 중심), 가자화검(연기 중심)']
+        ],
+        videoDesc: '『측미안』 중 포증 아리아, 정 역 대표작',
+        videoLabel: '『측미안』 감상하기'
+      }
+    }
+  },
+  {
+    level: 4,
+    videoSrc: 'https://www.bilibili.com/video/BV1B54y1f7wu/',
+    text: {
+      zh: {
+        role: '末行', name: '末——苍髯白须',
+        intro: '「末」是戏曲中次要男性角色的总称，现代京剧中末行已基本并入老生行，专指年老持重的角色，以苍髯（白胡须）为标志，代表老臣、谋士、长者。',
+        facts: [
+          ['特征','白色或灰色三绺长须，举止端正持重，多为良臣辅佐角色'],
+          ['代表角色','赵匡胤手下老臣、老教师、年迈英雄'],
+          ['历史','末行是昆曲时代传下来的古老分类，清代逐渐与老生合流']
+        ],
+        videoDesc: '《四郎探母》选段·杨延辉"我好比笼中鸟有翅难展"，老生名段',
+        videoLabel: '观看《四郎探母》选段'
+      },
+      en: {
+        role: 'Mo (Elderly Male)', name: 'Mo - Grey-Bearded Elder',
+        intro: 'Mo is the general term for secondary male roles in Chinese opera. In modern Peking Opera, Mo has largely merged with Laosheng, specializing in elderly, dignified characters with grey/white beards - representing old ministers, advisors, and elders.',
+        facts: [
+          ['Features','White or grey three-part long beard, dignified bearing, typically loyal minister roles'],
+          ['Notable Roles','Old ministers, elderly teachers, aged heroes'],
+          ['History','Mo originated in Kunqu opera and gradually merged with Laosheng during the Qing Dynasty']
+        ],
+        videoDesc: '"Silang Visits His Mother" excerpt - Yang Yanhui aria, classic Laosheng piece',
+        videoLabel: 'Watch "Silang Visits His Mother"'
+      },
+      ja: {
+        role: '末行（老齢男性役）', name: '末——蒼髯白須',
+        intro: '「末」は戯曲における脇役の男性役の総称。現代京劇ではほぼ老生に統合され、白い鬚（あごひげ）を特徴とする老齢で重厚な役柄——老臣や参謀、長者を表す。',
+        facts: [
+          ['特徴','白または灰色の三筋の長い鬚、端正で重厚な振る舞い、主に忠臣の脇役'],
+          ['代表的な役','趙匡胤配下の老臣、老教師、老齢の英雄'],
+          ['歴史','末行は崑曲時代の古い分類で、清代に次第に老生と合流']
+        ],
+        videoDesc: '『四郎探母』より楊延輝「私は籠の中の鳥」、老生の名場面',
+        videoLabel: '『四郎探母』を見る'
+      },
+      ko: {
+        role: '말(노년 남성 역)', name: '말——창염백수',
+        intro: '"말(末)"은 희곡에서 보조 남성 역할의 총칭으로, 현대 경극에서는 거의 노생에 통합되었습니다. 흰 수염을 특징으로 하며 노신, 참모, 장로를 대표합니다.',
+        facts: [
+          ['특징','흰색 또는 회색의 긴 수염, 단정하고 중후한 태도, 주로 충신 보좌 역할'],
+          ['대표 역할','조광윤 휘하 노신, 노교사, 노령 영웅'],
+          ['역사','말행은 곤곡 시대의 고대 분류로, 청나라 때 점차 노생과 합류']
+        ],
+        videoDesc: '『사랑탐모』 중 양연휘 아리아, 노생 명장면',
+        videoLabel: '『사랑탐모』 감상하기'
+      }
+    }
+  },
+  {
+    level: 5,
+    videoSrc: 'https://www.bilibili.com/video/BV1kZ4y1M7Cq/',
+    text: {
+      zh: {
+        role: '丑行', name: '丑——插科打诨',
+        intro: '「丑」是京剧中的滑稽角色，以鼻梁上的白色豆腐块妆著称，分文丑（滑稽文人）和武丑（滑稽武将）。丑角用说白为主，语言幽默风趣，素有"无丑不成戏"的说法。',
+        facts: [
+          ['豆腐块妆','鼻梁两侧涂白块，象征滑稽诙谐，不论善恶均有此妆'],
+          ['代表角色','时迁（小偷）、蒋干（书生）、程咬金（武丑）'],
+          ['绝技','武丑的"跟头功"和"矮子步"是高难技艺，需要极好的腰腿功']
+        ],
+        videoDesc: '《群英会》选段·蒋干盗书，文丑名段，诙谐幽默',
+        videoLabel: '观看《群英会》选段'
+      },
+      en: {
+        role: 'Chou (Clown)', name: 'Chou - Comic Relief',
+        intro: 'Chou is the comic role in Peking Opera, recognized by the white patch makeup on the nose bridge. Divided into Wenchou (civilian clown) and Wuchou (martial clown). Chou relies on spoken dialogue with humor and wit - "no play is complete without a clown".',
+        facts: [
+          ['White Patch','White patch on nose bridge symbolizes humor; worn by both good and evil characters'],
+          ['Notable Roles','Shi Qian (thief), Jiang Gan (scholar), Cheng Yaojin (martial clown)'],
+          ['Special Skills','Wuchou tumbling and "dwarf steps" are highly demanding, requiring exceptional acrobatics']
+        ],
+        videoDesc: '"Meeting of Heroes" excerpt - Jiang Gan steals the letter, classic Wenchou scene',
+        videoLabel: 'Watch "Meeting of Heroes"'
+      },
+      ja: {
+        role: '丑行（道化役）', name: '丑——插科打諢',
+        intro: '「丑」は京劇の滑稽役で、鼻筋の白い豆腐型隈取が特徴。文丑（滑稽な文人）と武丑（滑稽な武人）に分類。台詞中心で機知に富み、「丑なくして芝居は成り立たず」と言われる。',
+        facts: [
+          ['豆腐隈取','鼻筋両側の白いブロック、滑稽さを象徴。善悪問わずこの隈取を用いる'],
+          ['代表的な役','時遷（泥棒）、蒋幹（書生）、程咬金（武丑）'],
+          ['特殊技能','武丑の宙返り技と「矮子歩き」は高度な技術で優れた身体能力が必要']
+        ],
+        videoDesc: '『群英会』より蒋幹の書簡盗み、文丑の名場面',
+        videoLabel: '『群英会』を見る'
+      },
+      ko: {
+        role: '축(광대 역)', name: '축——희극적 역할',
+        intro: '"축(丑)"은 경극의 희극적 역할로 콧등의 흰색 두부 모양 분장이 특징입니다. 문축(희극적 문인)과 무축(희극적 무장)으로 나뉘며, 대사 위주의 유머러스한 연기가 특징입니다.',
+        facts: [
+          ['두부 분장','콧등 양쪽의 흰색 블록, 해학을 상징. 선악 관계없이 이 분장 사용'],
+          ['대표 역할','시천(도둑), 장간(서생), 정교금(무축)'],
+          ['특기','무축의 공중제비와 "난쟁이 걸음"은 고난도 기예로 뛰어난 신체 능력 필요']
+        ],
+        videoDesc: '『군영회』 중 장간의 편지 도둑, 문축 명장면',
+        videoLabel: '『군영회』 감상하기'
+      }
+    }
+  },
+  {
+    level: 6,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧脸谱艺术',
+    text: {
+      zh: {
+        role: '脸谱艺术', name: '脸谱——千人千面',
+        intro: '京剧脸谱是京剧最具辨识度的标志之一，通过色彩和图案表现角色性格。红脸代表忠勇（关羽）、白脸代表奸诈（曹操）、黑脸代表刚正（包拯）、蓝绿脸代表草莽（窦尔墩）。"勾脸"技法要求笔触精准、一气呵成。',
+        facts: [
+          ['红色','忠勇义烈——关羽、姜维'],
+          ['白色','奸诈多疑——曹操、严嵩'],
+          ['黑色','刚正不阿——包拯、张飞'],
+          ['蓝绿色','草莽豪杰——窦尔墩、单雄信'],
+          ['金色/银色','神佛精怪——孙悟空、二郎神']
+        ],
+        videoDesc: '京剧脸谱绘制过程，一笔一画见功夫',
+        videoLabel: '观看脸谱绘制'
+      },
+      en: {
+        role: 'Face Painting', name: 'Face Painting - A Thousand Faces',
+        intro: 'Peking Opera facial makeup is one of its most iconic features, using colors and patterns to express character traits. Red = loyalty (Guan Yu), White = treachery (Cao Cao), Black = integrity (Bao Zheng), Blue/Green = outlaws. The painting technique requires precision in every stroke.',
+        facts: [
+          ['Red','Loyalty and bravery - Guan Yu, Jiang Wei'],
+          ['White','Treachery and cunning - Cao Cao, Yan Song'],
+          ['Black','Uprightness and justice - Bao Zheng, Zhang Fei'],
+          ['Blue/Green','Outlaws and rebels - Dou Erdun, Shan Xiongxin'],
+          ['Gold/Silver','Deities and spirits - Sun Wukong, Erlang Shen']
+        ],
+        videoDesc: 'Face painting process demonstration, every stroke shows mastery',
+        videoLabel: 'Watch Face Painting'
+      },
+      ja: {
+        role: '隈取の芸術', name: '隈取——千変万化',
+        intro: '京劇の隈取は最も象徴的な特徴の一つで、色彩と図案で役柄の性格を表現する。赤は忠勇（関羽）、白は奸悪（曹操）、黒は剛直（包拯）、青緑は豪傑（竇爾墩）。隈取の筆遣いは一気呵成を要する。',
+        facts: [
+          ['赤','忠義勇烈——関羽、姜維'],
+          ['白','奸詐多疑——曹操、巌嵩'],
+          ['黒','剛正不阿——包拯、張飛'],
+          ['青/緑','草莽豪傑——竇爾墩、単雄信'],
+          ['金/銀','神仏精怪——孫悟空、二郎神']
+        ],
+        videoDesc: '隈取の描き方実演、一筆一画に技あり',
+        videoLabel: '隈取実演を見る'
+      },
+      ko: {
+        role: '분장 예술', name: '분장——천인천면',
+        intro: '경극 분장은 가장 상징적인 특징 중 하나로, 색상과 도안으로 역할의 성격을 표현합니다. 빨강=충용(관우), 흰색=간사(조조), 검정=강직(포정), 파랑/초록=호걸의 분장 기법은 정밀한 붓놀림이 필요합니다.',
+        facts: [
+          ['빨강','충의와 용맹——관우, 강유'],
+          ['흰색','간사와 교활——조조, 엄숭'],
+          ['검정','강직과 정의——포정, 장비'],
+          ['파랑/초록','호걸과 반역자——두이돈, 산웅신'],
+          ['금/은','신불과 요괴——손오공, 이랑신']
+        ],
+        videoDesc: '경극 분장 그리기, 한 획 한 획에 기예가 담겨 있습니다',
+        videoLabel: '분장 그리기 보기'
+      }
+    }
+  },
+  {
+    level: 7,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧四大名旦',
+    text: {
+      zh: {
+        role: '四大名旦', name: '四大名旦——旦行巅峰',
+        intro: '20世纪20年代，梅兰芳、程砚秋、尚小云、荀慧生四位旦角艺术家被公推为"四大名旦"。梅派雍容华贵、程派幽咽婉转、尚派刚健婀娜、荀派活泼俏丽，四派各有千秋，共同将京剧旦角艺术推向巅峰。',
+        facts: [
+          ['梅兰芳(1894-1961)','梅派创始人，"梅兰芳体系"与斯坦尼、布莱希特并称世界三大戏剧体系'],
+          ['程砚秋(1904-1958)','程派创始人，以幽咽婉转、如泣如诉的唱腔著称，《锁麟囊》为代表作'],
+          ['尚小云(1900-1976)','尚派创始人，唱腔高亢激越、刚健婀娜，《昭君出塞》为代表作'],
+          ['荀慧生(1900-1968)','荀派创始人，表演活泼俏丽、生活气息浓郁，《红娘》为代表作']
+        ],
+        videoDesc: '四大名旦经典唱段合集，领略旦角艺术之巅',
+        videoLabel: '观看四大名旦合集'
+      },
+      en: {
+        role: 'Four Great Dan', name: 'Four Great Dan - Pinnacle of Female Roles',
+        intro: 'In the 1920s, Mei Lanfang, Cheng Yanqiu, Shang Xiaoyun, and Xun Huisheng were acclaimed as the "Four Great Dan Actors". Each developed a distinct school, collectively elevating Peking Opera female role performance to its zenith.',
+        facts: [
+          ['Mei Lanfang','Founder of Mei School, his "Mei Lanfang System" is one of the three great theatrical systems of the world'],
+          ['Cheng Yanqiu','Founder of Cheng School, known for plaintive and melancholic singing, "The Jewelry Purse"'],
+          ['Shang Xiaoyun','Founder of Shang School, powerful yet graceful style, "Zhaojun Departs the Frontier"'],
+          ['Xun Huisheng','Founder of Xun School, lively and charming performance, "The Matchmaker"']
+        ],
+        videoDesc: 'Collection of classic arias by the Four Great Dan',
+        videoLabel: 'Watch Four Great Dan'
+      },
+      ja: {
+        role: '四大名旦', name: '四大名旦——旦行の頂点',
+        intro: '1920年代、梅蘭芳・程硯秋・尚小雲・荀慧生の四人が「四大名旦」と称された。梅派は優雅華麗、程派は哀切婉曲、尚派は剛健婀娜、荀派は活発優麗、各派が独自の境地を開き京劇旦角芸術を頂点に導いた。',
+        facts: [
+          ['梅蘭芳','梅派創始者、「梅蘭芳体系」は世界三大演劇体系の一つ'],
+          ['程硯秋','程派創始者、哀切な歌唱が特色、『鎖麟囊』が代表作'],
+          ['尚小雲','尚派創始者、高亢激越な歌唱、『昭君出塞』が代表作'],
+          ['荀慧生','荀派創始者、活発で生活感あふれる演技、『紅娘』が代表作']
+        ],
+        videoDesc: '四大名旦名場面集、旦角芸術の粋を堪能',
+        videoLabel: '四大名旦の映像を見る'
+      },
+      ko: {
+        role: '4대 명단', name: '4대 명단——여성 역의 정점',
+        intro: '1920년대, 매란방·정연추·상소운·순혜생 네 사람이 "4대 명단"으로 칭송받았습니다. 매파의 우아함, 정파의 애절함, 상파의 강건함, 순파의 생동감 등 각자 독특한 유파로 경극 여성 역 예술을 정점으로 이끌었습니다.',
+        facts: [
+          ['매란방','매파 창시자, "매란방 체계"는 세계 3대 연극 체계 중 하나'],
+          ['정연추','정파 창시자, 구슬픈 창법이 특징, 『쇄린낭』이 대표작'],
+          ['상소운','상파 창시자, 고음의 힘찬 창법, 『소군출새』가 대표작'],
+          ['순혜생','순파 창시자, 생동감 넘치는 연기, 『홍낭』이 대표작']
+        ],
+        videoDesc: '4대 명단 명장면 모음, 여성 역 예술의 정수',
+        videoLabel: '4대 명단 영상 보기'
+      }
+    }
+  },
+  {
+    level: 8,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧老生流派',
+    text: {
+      zh: {
+        role: '老生流派', name: '老生流派——须生风华',
+        intro: '老生是京剧第一主角，四大流派各有千秋。余派（余叔岩）韵味醇厚、马派（马连良）潇洒流畅、谭派（谭鑫培）高亢激越、麒派（周信芳）苍劲有力。老生唱腔以"脑后音"著称，讲究字正腔圆、声情并茂。',
+        facts: [
+          ['余（叔岩）派','韵味醇厚，中正平和，被誉为"老生正宗"，《搜孤救孤》为代表作'],
+          ['马（连良）派','潇洒流畅，念白如珠落玉盘，《借东风》《空城计》为代表作'],
+          ['谭（鑫培）派','高亢激越，开创"谭腔"一脉，《定军山》为中国第一部电影'],
+          ['麒（麟童）派','苍劲有力，周信芳艺名"麒麟童"，善演慷慨悲歌，《徐策跑城》为代表作']
+        ],
+        videoDesc: '老生四大流派经典选段合集',
+        videoLabel: '观看老生流派合集'
+      },
+      en: {
+        role: 'Laosheng Schools', name: 'Laosheng - Schools of the Bearded',
+        intro: 'Laosheng is the leading male role in Peking Opera. Four major schools each have distinct styles: Yu School (mellow), Ma School (flowing), Tan School (soaring), and Qi School (powerful). Laosheng singing is famous for its resonant "behind-the-head" vocal technique.',
+        facts: [
+          ['Yu (Shuyan) School','Rich and balanced tone, considered the "orthodox Laosheng" style'],
+          ['Ma (Lianliang) School','Elegant and flowing, dialogue like pearls falling on jade'],
+          ['Tan (Xinpei) School','Soaring and passionate, his "Dingjun Mountain" was China\'s first film'],
+          ['Qi (Lintong) School','Powerful and heroic, Zhou Xinfang performed tragic heroes with grandeur']
+        ],
+        videoDesc: 'Collection of classic arias from the four Laosheng schools',
+        videoLabel: 'Watch Laosheng Schools'
+      },
+      ja: {
+        role: '老生流派', name: '老生流派——鬚生の風格',
+        intro: '老生は京劇の第一主役。四大流派は各々独特の境地を持つ。余派は醇厚な味わい、馬派は洒脱流暢、譚派は高亢激越、麒派は蒼勁有力。老生の歌唱は「脳後音」と呼ばれる独特の発声法で知られる。',
+        facts: [
+          ['余（叔岩）派','醇厚な味わいと中庸の美、「老生の正統」と称される'],
+          ['馬（連良）派','洒脱で流暢、珠玉のような台詞回し'],
+          ['譚（鑫培）派','高く張りのある声、『定軍山』は中国初の映画'],
+          ['麒（麟童）派','蒼勁で力強い、周信芳は慷慨悲壮の英雄を演じた']
+        ],
+        videoDesc: '老生四大流派名場面集',
+        videoLabel: '老生流派の映像を見る'
+      },
+      ko: {
+        role: '노생 유파', name: '노생 유파——수염 역의 풍모',
+        intro: '노생은 경극의 제1주역입니다. 4대 유파 각각 독특한 스타일: 여파의 순후함, 마파의 유창함, 담파의 격앙됨, 기파의 강건함. 노생 창법은 독특한 "뇌후음" 발성 기법으로 유명합니다.',
+        facts: [
+          ['여(숙암)파','깊고 풍부한 음색, "노생의 정통"으로 평가'],
+          ['마(연량)파','우아하고 유려, 구슬이 옥판에 떨어지는 듯한 대사'],
+          ['담(흠배)파','고음의 격앙된 창법, 『정군산』은 중국 최초의 영화'],
+          ['기(인동)파','강건하고 힘찬, 주신방은 비장한 영웅을 연기']
+        ],
+        videoDesc: '노생 4대 유파 명장면 모음',
+        videoLabel: '노생 유파 영상 보기'
+      }
+    }
+  },
+  {
+    level: 9,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧文武场乐器',
+    text: {
+      zh: {
+        role: '文武场面', name: '文武场——京剧乐队',
+        intro: '京剧乐队分"文场"和"武场"。文场以京胡（主奏）、月琴、三弦为主，负责唱腔伴奏；武场以板鼓（指挥）、大锣、铙钹、小锣为主，掌控节奏和气氛。文武配合，方成一台好戏——"一台锣鼓半台戏"。',
+        facts: [
+          ['京胡','文场之首，两根弦的拉弦乐器，音色高亢明亮'],
+          ['月琴','四弦弹拨乐器，与京胡配合形成京剧独特音响'],
+          ['板鼓','武场之首，由"鼓师"演奏，全剧节奏的总指挥'],
+          ['大锣','最大最响的打击乐器，用于武将出场和紧张场面'],
+          ['铙钹/小锣','铙钹清脆、小锣活泼，配合大锣形成丰富打击层次']
+        ],
+        videoDesc: '京剧文武场演奏示范，感受锣鼓经的魅力',
+        videoLabel: '观看文武场演奏'
+      },
+      en: {
+        role: 'Orchestra', name: 'Civil & Martial Orchestra',
+        intro: 'The Peking Opera orchestra is divided into "Civil" (Wenchang) and "Martial" (Wuchang) sections. The civil section, led by the jinghu, accompanies singing. The martial section, led by the drum master, controls rhythm and atmosphere. As the saying goes: "Half of the opera lies in the percussion."',
+        facts: [
+          ['Jinghu','Leader of civil section, a two-stringed fiddle with brilliant, piercing tone'],
+          ['Yueqin','Four-stringed plucked lute, blending with jinghu for the signature Peking Opera sound'],
+          ['Bangu (Drum)','Leader of martial section, played by the drum master who conducts the entire performance'],
+          ['Daluo (Large Gong)','The largest percussion instrument, used for martial entrances and dramatic moments'],
+          ['Cymbals & Small Gong','Crisp cymbals and lively small gong create rich rhythmic layers']
+        ],
+        videoDesc: 'Peking Opera orchestra demonstration, experience the rhythm magic',
+        videoLabel: 'Watch Orchestra Demo'
+      },
+      ja: {
+        role: '文武場面', name: '文武場——京劇楽隊',
+        intro: '京劇楽隊は「文場」と「武場」に分かれる。文場は京胡（主奏）・月琴・三弦で歌唱伴奏を担い、武場は板鼓（指揮）・大鑼・鐃鈸・小鑼でリズムと雰囲気を支配する。文武の調和が名舞台を創る——「一臺の鑼鼓は半臺の芝居」。',
+        facts: [
+          ['京胡','文場の首位、二弦の擦弦楽器、高く明るい音色'],
+          ['月琴','四弦の撥弦楽器、京胡と調和し京劇独特の響きを生む'],
+          ['板鼓','武場の首位、「鼓師」が演奏し全劇のリズムを指揮'],
+          ['大鑼','最大最響の打楽器、武将の登場や緊張場面に使用'],
+          ['鐃鈸/小鑼','鐃鈸は鋭く、小鑼は軽快、大鑼と重層的な打楽器効果']
+        ],
+        videoDesc: '文武場演奏の実演、鑼鼓経の魅力を体感',
+        videoLabel: '文武場演奏を見る'
+      },
+      ko: {
+        role: '문무 악대', name: '문무장——경극 오케스트라',
+        intro: '경극 오케스트라는 "문장"과 "무장"으로 나뉩니다. 문장은 경호·월금·삼현으로 창 반주를, 무장은 판고·대라·요발·소라로 리듬과 분위기를 장악합니다. "한 대의 라고가 반 대의 연극"이라는 말이 있습니다.',
+        facts: [
+          ['경호','문장의 리더, 2현 찰현악기, 높고 밝은 음색'],
+          ['월금','4현 발현악기, 경호와 조화로운 경극 특유의 음향'],
+          ['판고','무장의 리더, "고사"가 연주하며 전극의 리듬을 지휘'],
+          ['대라','가장 크고 울리는 타악기, 무장 등장과 긴장 장면에 사용'],
+          ['요발/소라','요발은 경쾌, 소라는 생동감, 대라와 풍부한 리듬 층 형성']
+        ],
+        videoDesc: '경극 문무장 연주 시연, 라고경의 매력을 느껴보세요',
+        videoLabel: '문무장 연주 보기'
+      }
+    }
+  },
+  {
+    level: 10,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧行头服饰',
+    text: {
+      zh: {
+        role: '锦绣行头', name: '行头——衣冠锦绣',
+        intro: '京剧服饰统称"行头"，以明代服装为基础，不受朝代和季节限制。蟒袍（帝王将相）、褶子（文人便服）、靠（武将铠甲）、帔（官员常服）、宫装（后妃礼服）等各有定制。"宁穿破，不穿错"是行头穿戴的铁律。',
+        facts: [
+          ['蟒袍','帝王将相的礼服，绣有龙纹，黄蟒为帝王独有'],
+          ['靠','武将的铠甲，背后扎四面"靠旗"，威风凛凛'],
+          ['褶子','各色人等的便服，书生穿素褶、富人穿花褶'],
+          ['帔','官员的常礼服，对襟长袍，夫妇同台穿同色对帔'],
+          ['凤冠霞帔','皇后贵妃的礼服，以凤冠和霞帔（彩色披肩）最为华丽']
+        ],
+        videoDesc: '京剧行头展示，领略传统服饰之美',
+        videoLabel: '观看行头展示'
+      },
+      en: {
+        role: 'Costumes', name: 'Opulent Costumes',
+        intro: 'Peking Opera costumes, collectively called "Xingtou", are based on Ming Dynasty clothing without seasonal or historical constraints. Each type has strict conventions: "Better to wear torn than wrong" is the iron rule of costume design.',
+        facts: [
+          ['Mang Robe','Ceremonial robe for emperors and officials, embroidered with dragon patterns'],
+          ['Kao (Armor)','Military armor with four back flags, projecting martial majesty'],
+          ['Xuezi','Casual wear for all classes - plain for scholars, patterned for the wealthy'],
+          ['Pei','Officials\' formal robe, couples wear matching colors on stage'],
+          ['Phoenix Crown','The most ornate headpiece for empresses, adorned with jewels and phoenixes']
+        ],
+        videoDesc: 'Peking Opera costume showcase, appreciate traditional garment artistry',
+        videoLabel: 'Watch Costume Display'
+      },
+      ja: {
+        role: '錦繍の行頭', name: '行頭——豪華絢爛',
+        intro: '京劇衣装は総称して「行頭」と呼び、明代衣装を基に時代や季節を越えて使われる。蟒袍（帝王）、褶子（文人普段着）、靠（武将鎧）、帔（官服）、宮装（后妃礼服）など。「破れても間違えてはならぬ」が鉄則。',
+        facts: [
+          ['蟒袍','帝王将相の礼服、龍紋刺繍、黄蟒は帝王専用'],
+          ['靠','武将の鎧、背面に四面の「靠旗」を背負う'],
+          ['褶子','各階層の普段着、書生は素色、富豪は柄物'],
+          ['帔','官僚の礼服、対襟の長衣、夫婦は同色の対帔'],
+          ['鳳冠霞帔','皇后の礼服、鳳凰冠と霞帔が最も豪華']
+        ],
+        videoDesc: '京劇行頭の展示、伝統衣装の美を堪能',
+        videoLabel: '行頭展示を見る'
+      },
+      ko: {
+        role: '화려한 의상', name: '행두——호화로운 의상',
+        intro: '경극 의상은 통칭 "행두"라 하며 명나라 복식을 기반으로 합니다. 망포(제왕)·습자(문인 평상복)·고(무장 갑옷)·폐(관리 복장)·궁장(후비 예복) 등 각각 엄격한 규칙이 있습니다. "찢어져도 틀리게 입지 않는다"는 철칙입니다.',
+        facts: [
+          ['망포','제왕과 장상의 예복, 용무늬 자수, 황색 망포는 제왕 전용'],
+          ['고(갑옷)','무장의 갑옷, 등에 네 개의 "고기" 깃발'],
+          ['습자','각계 각층의 평상복, 서생은 소박한 색, 부자는 화려한 무늬'],
+          ['폐','관리의 상복, 앞트임 긴 옷, 부부는 같은 색으로 착용'],
+          ['봉관하폐','황후의 예복, 봉관과 채색 망토가 가장 화려']
+        ],
+        videoDesc: '경극 행두 전시, 전통 의상의 아름다움을 감상하세요',
+        videoLabel: '행두 전시 보기'
+      }
+    }
+  },
+  {
+    level: 11,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧四功五法',
+    text: {
+      zh: {
+        role: '手眼身法', name: '四功五法——台上功夫',
+        intro: '京剧表演的核心是"四功五法"。四功：唱（唱腔）、念（念白）、做（身段表演）、打（武打）。五法：手（手势）、眼（眼神）、身（身段）、法（法度）、步（台步）。演员须经多年苦练才能做到"唱念做打"样样精通。',
+        facts: [
+          ['唱功','京剧之魂，讲究"字正腔圆""声情并茂"'],
+          ['念白','介于说唱之间的道白，有"千斤道白四两唱"之说'],
+          ['做功','身段和表情的表演艺术，包括水袖、髯口、翎子等绝技'],
+          ['打功','武打和翻腾技艺，融合了中国武术与杂技精华'],
+          ['兰花指','旦角标志性手势，讲究千姿百态、柔美含蓄']
+        ],
+        videoDesc: '京剧四功五法教学示范，看演员如何练就一身功夫',
+        videoLabel: '观看四功五法'
+      },
+      en: {
+        role: 'Four Skills', name: 'Four Skills & Five Methods',
+        intro: 'The core of Peking Opera performance is "Four Skills and Five Methods". Four Skills: Singing, Recitation, Acting, and Acrobatics. Five Methods: Hand gestures, Eye expressions, Body movement, Technique, and Footwork. Years of rigorous training are required to master all.',
+        facts: [
+          ['Singing','The soul of Peking Opera, requiring perfect pronunciation and emotional depth'],
+          ['Recitation','A stylized speech between singing and talking, "A pound of recitation is worth an ounce of song"'],
+          ['Acting','Body language and facial expression, including water sleeves and beard techniques'],
+          ['Acrobatics','Martial arts and tumbling, blending Chinese kung fu with acrobatics'],
+          ['Orchid Fingers','Signature female hand gesture, elegant with countless variations']
+        ],
+        videoDesc: 'Four Skills & Five Methods demonstration by master performers',
+        videoLabel: 'Watch Performance Skills'
+      },
+      ja: {
+        role: '手眼身法', name: '四功五法——舞台の極意',
+        intro: '京劇表演の核心は「四功五法」。四功：唱（歌唱）、念（台詞）、做（所作）、打（立廻り）。五法：手（手振り）、眼（目遣い）、身（身振り）、法（法度）、歩（歩き方）。俳優は長年の修練を経て初めて域に達する。',
+        facts: [
+          ['唱功','京劇の魂、「字正腔円」「声情並茂」を極める'],
+          ['念白','歌と台詞の中間の語り、「千斤の台詞は四両の歌唱に勝る」'],
+          ['做功','身振りと表情の芸術、水袖や髯口、翎子などの特殊技法'],
+          ['打功','武術とアクロバット、中国武術と曲芸の精華を融合']
+        ],
+        videoDesc: '四功五法の実演指導、俳優の修行を垣間見る',
+        videoLabel: '四功五法を見る'
+      },
+      ko: {
+        role: '사공오법', name: '사공오법——무대의 극의',
+        intro: '경극 연기의 핵심은 "사공오법"입니다. 사공: 창(노래), 념(대사), 주(몸짓), 타(무술). 오법: 수(손짓), 안(눈빛), 신(몸동작), 법(법도), 보(걸음걸이). 수년간의 혹독한 훈련이 필요합니다.',
+        facts: [
+          ['창공','경극의 혼, 정확한 발음과 감정 표현을 요구'],
+          ['염백','노래와 대화의 중간 양식, "일 근의 대사가 사 냥의 노래보다 중요"'],
+          ['주공','몸짓과 표정의 예술, 물소매·수염·깃털 등의 특수 기예'],
+          ['타공','무술과 곡예, 중국 무술과 서커스의 정수를 융합']
+        ],
+        videoDesc: '사공오법 시범, 배우의 수련 과정을 엿보세요',
+        videoLabel: '사공오법 보기'
+      }
+    }
+  },
+  {
+    level: 12,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧经典剧目',
+    text: {
+      zh: {
+        role: '名剧荟萃', name: '经典剧目——戏如人生',
+        intro: '京剧经典剧目数以千计，取材于历史演义、民间传说和文学名著。《霸王别姬》《贵妃醉酒》《空城计》《三岔口》《打渔杀家》等是久演不衰的传世之作。每出戏都是一部浓缩的中国历史文化课。',
+        facts: [
+          ['《霸王别姬》','楚霸王项羽兵败垓下，虞姬舞剑殉情——"力拔山兮气盖世"'],
+          ['《贵妃醉酒》','杨贵妃百花亭设宴，借酒消愁——梅兰芳的代表作'],
+          ['《空城计》','诸葛亮城楼抚琴，吓退司马懿大军——"我正在城楼观山景"'],
+          ['《三岔口》','黑夜中任堂惠与刘利华摸黑打斗——京剧武戏的巅峰'],
+          ['《白蛇传》','白素贞与许仙的爱情传奇——"断桥相会"最为感人']
+        ],
+        videoDesc: '京剧经典剧目精彩片段合集',
+        videoLabel: '观看经典剧目'
+      },
+      en: {
+        role: 'Repertoires', name: 'Classic Repertoires',
+        intro: 'Peking Opera boasts thousands of classic plays drawn from history, folklore, and literature. Masterpieces like "Farewell My Concubine", "The Drunken Concubine", and "Empty City Strategy" have been performed for centuries - each play is a condensed lesson in Chinese history and culture.',
+        facts: [
+          ['Farewell My Concubine','King Xiang Yu\'s final battle - Consort Yu dances with a sword before taking her life'],
+          ['The Drunken Concubine','Consort Yang drowns her sorrows in wine - Mei Lanfang\'s signature role'],
+          ['Empty City Strategy','Zhuge Liang plays the zither on the city wall to bluff the enemy army'],
+          ['At the Crossroads','A breathtaking fight scene in complete darkness - pinnacle of martial arts performance'],
+          ['The White Snake','Love story of the white snake spirit Bai Suzhen and mortal Xu Xian']
+        ],
+        videoDesc: 'Collection of classic Peking Opera highlights',
+        videoLabel: 'Watch Classic Scenes'
+      },
+      ja: {
+        role: '名劇集', name: '名劇——芝居は人生',
+        intro: '京劇の名作は数千に上り、歴史や伝説、文学から題材を得る。『項羽と虞姫』『貴妃酔酒』『空城計』『三岔口』『白蛇伝』などは不朽の名作として上演され続けている。',
+        facts: [
+          ['『項羽と虞姫』','項羽、垓下に敗れ虞姫が剣舞の後に殉死'],
+          ['『貴妃酔酒』','楊貴妃、宴を設け酒に憂さを晴らす——梅蘭芳の代表作'],
+          ['『空城計』','諸葛亮、城楼で琴を弾き敵軍を退ける'],
+          ['『三岔口』','暗闇の中での格闘場面——京劇武闘の白眉'],
+          ['『白蛇伝』','白素貞と許仙の恋物語——「断橋」の場面が最も感動的']
+        ],
+        videoDesc: '京劇名場面集、珠玉の舞台を堪能',
+        videoLabel: '名劇映像を見る'
+      },
+      ko: {
+        role: '명극 모음', name: '명극——인생은 연극',
+        intro: '경극 명작은 수천 편에 달하며 역사, 전설, 문학에서 소재를 얻습니다. 『패왕별희』『귀비취주』『공성계』『삼차구』『백사전』 등은 수백 년 동안 공연되어 온 불멸의 명작입니다.',
+        facts: [
+          ['『패왕별희』','초패왕 항우의 최후, 우희가 검무 후 순절'],
+          ['『귀비취주』','양귀비가 술로 시름을 달래다——매란방의 대표작'],
+          ['『공성계』','제갈량이 성루에서 거문고를 타며 적군을 물리치다'],
+          ['『삼차구』','어둠 속에서의 격투 장면——경극 무예의 정수'],
+          ['『백사전』','백사 백소정과 허선의 사랑 이야기——"단교" 장면이 가장 감동적']
+        ],
+        videoDesc: '경극 명장면 모음, 주옥같은 무대를 감상하세요',
+        videoLabel: '명극 영상 보기'
+      }
+    }
+  },
+  {
+    level: 13,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧海外传播',
+    text: {
+      zh: {
+        role: '京剧西行', name: '京剧西行——走向世界',
+        intro: '梅兰芳是京剧国际化的先驱。1919年首次访日演出，1930年访美（纽约百老汇第49街剧院），1935年访苏（莫斯科、列宁格勒）。他将京剧传播到世界，与卓别林、斯坦尼等艺术大师结下深厚友谊。2010年，京剧被列入联合国人类非物质文化遗产。',
+        facts: [
+          ['1919年访日','梅兰芳首次出国演出，在东京、大阪、神户引起轰动'],
+          ['1930年访美','纽约百老汇演出72天，获波摩那学院和南加州大学荣誉博士'],
+          ['1935年访苏','莫斯科演出轰动，斯坦尼斯拉夫斯基和布莱希特深受启发'],
+          ['2010年非遗','联合国教科文组织将京剧列入"人类非物质文化遗产代表作名录"'],
+          ['当代传播','孔子学院在全球推广京剧，每年有数百场海外演出']
+        ],
+        videoDesc: '梅兰芳海外演出珍贵影像，看京剧如何征服世界',
+        videoLabel: '观看京剧西行'
+      },
+      en: {
+        role: 'Going Global', name: 'Peking Opera Goes Global',
+        intro: 'Mei Lanfang pioneered the internationalization of Peking Opera. He toured Japan (1919), the US (1930, Broadway), and the Soviet Union (1935), befriending Charlie Chaplin and Stanislavski. In 2010, UNESCO inscribed Peking Opera on its Intangible Cultural Heritage list.',
+        facts: [
+          ['1919 Japan Tour','First overseas performance, causing sensation in Tokyo, Osaka, and Kobe'],
+          ['1930 US Tour','72 days on Broadway, received honorary doctorates from Pomona College and USC'],
+          ['1935 USSR Tour','Inspired Stanislavski and Brecht with performances in Moscow'],
+          ['2010 UNESCO','Inscribed on the Representative List of Intangible Cultural Heritage of Humanity'],
+          ['Global Outreach','Confucius Institutes promote Peking Opera worldwide, with hundreds of shows annually']
+        ],
+        videoDesc: 'Rare footage of Mei Lanfang\'s international tours',
+        videoLabel: 'Watch Going Global'
+      },
+      ja: {
+        role: '京劇西行', name: '京劇、世界へ',
+        intro: '梅蘭芳は京劇国際化の先駆者。1919年日本初公演、1930年米国（ブロードウェイ）、1935年ソ連公演。チャップリンやスタニスラフスキーとも交流。2010年、ユネスコ無形文化遺産に登録。',
+        facts: [
+          ['1919年訪日','初の海外公演、東京・大阪・神戸で大反響'],
+          ['1930年訪米','ブロードウェイで72日間公演、名誉博士号を授与'],
+          ['1935年訪ソ','モスクワ公演でスタニスラフスキーらに深い影響'],
+          ['2010年無形遺産','ユネスコ「人類無形文化遺産代表作」に登録'],
+          ['世界展開','孔子学院が京劇を世界に広め、年間数百公演']
+        ],
+        videoDesc: '梅蘭芳海外公演の貴重映像、京劇の世界征服を見る',
+        videoLabel: '京劇西行を見る'
+      },
+      ko: {
+        role: '세계로', name: '경극의 세계화',
+        intro: '매란방은 경극 세계화의 선구자입니다. 1919년 일본, 1930년 미국(브로드웨이), 1935년 소련 공연. 채플린·스타니슬랍스키 등과 교류했습니다. 2010년 유네스코 인류무형문화유산에 등재되었습니다.',
+        facts: [
+          ['1919년 일본','첫 해외 공연, 도쿄·오사카·고베에서 대성공'],
+          ['1930년 미국','브로드웨이 72일 공연, 명예박사 학위 수여'],
+          ['1935년 소련','모스크바 공연, 스타니슬랍스키와 브레히트에 영감'],
+          ['2010년 유네스코','"인류무형문화유산 대표목록"에 등재'],
+          ['세계 확산','공자학원이 전 세계에 경극을 보급, 연간 수백 회 공연']
+        ],
+        videoDesc: '매란방 해외 공연 귀중한 영상, 경극의 세계 정복',
+        videoLabel: '세계화 영상 보기'
+      }
+    }
+  },
+  {
+    level: 14,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧创新现代',
+    text: {
+      zh: {
+        role: '古今新韵', name: '创新——古今交融',
+        intro: '京剧的生命力在于传承与创新。从谭鑫培到梅兰芳，每一代大师都在传统基础上推陈出新。当代京剧融合现代舞美、灯光、配器，涌现出《曹操与杨修》《大唐贵妃》等新编历史剧，以及融入流行音乐元素的"戏歌"新形式。',
+        facts: [
+          ['《曹操与杨修》','1988年首演，被誉为"新时期京剧里程碑"，获中国京剧艺术节金奖'],
+          ['《大唐贵妃》','梅派新编京剧，融入交响乐配器，让传统焕发现代魅力'],
+          ['青春版京剧','用年轻演员、现代审美演绎经典，吸引新一代观众'],
+          ['跨界融合','京剧+流行（《悟空》）、京剧+歌剧、京剧+动漫'],
+          ['数字京剧','VR京剧、全息投影、线上直播，打开传播新渠道']
+        ],
+        videoDesc: '当代京剧创新作品精彩片段',
+        videoLabel: '观看京剧新韵'
+      },
+      en: {
+        role: 'Innovation', name: 'Tradition Meets Modern',
+        intro: 'Peking Opera thrives on innovation within tradition. Contemporary productions integrate modern stage design, symphonic music, and technology. New historical dramas and "opera-pop" crossovers are attracting younger audiences worldwide.',
+        facts: [
+          ['Cao Cao & Yang Xiu','1988 premiere, hailed as a "milestone of new-era Peking Opera"'],
+          ['Tang Dynasty Concubine','Mei School revival with symphonic orchestration, blending tradition with modernity'],
+          ['Youth Edition','Reimagined classics with young performers and modern aesthetics for new audiences'],
+          ['Cross-genre Fusion','Peking Opera + pop, + opera, + anime'],
+          ['Digital Peking Opera','VR, holographic projection, live streaming open new channels']
+        ],
+        videoDesc: 'Contemporary Peking Opera innovation highlights',
+        videoLabel: 'Watch Modern Opera'
+      },
+      ja: {
+        role: '古今新韻', name: '革新——伝統と現代',
+        intro: '京劇の生命力は継承と革新にある。当代京劇は現代舞台装置や交響楽を融合し、『曹操と楊修』『大唐貴妃』などの新作歴史劇やポップスとの融合「戯歌」が登場している。',
+        facts: [
+          ['『曹操と楊修』','1988年初演、「新時代京劇の金字塔」と称される'],
+          ['『大唐貴妃』','梅派新編京劇、交響楽編曲で伝統に現代の魅力を'],
+          ['青春版京劇','若手俳優と現代感覚で古典を再創造'],
+          ['異分野融合','京劇＋ポップ、＋オペラ、＋アニメ'],
+          ['デジタル京劇','VR、ホログラム投影、オンライン配信']
+        ],
+        videoDesc: '現代京劇の革新的作品集',
+        videoLabel: '京劇新韻を見る'
+      },
+      ko: {
+        role: '혁신', name: '전통과 현대의 만남',
+        intro: '경극의 생명력은 전승과 혁신에 있습니다. 현대 경극은 무대 디자인, 조명, 교향악 편곡을 융합하여 『조조와 양수』『대당귀비』 등 신편 역사극과 대중음악 요소를 접목한 "희가" 형식이 등장했습니다.',
+        facts: [
+          ['『조조와 양수』','1988년 초연, "신시대 경극의 이정표"로 평가'],
+          ['『대당귀비』','매파 신편 경극, 교향악 편곡으로 전통에 현대적 매력을'],
+          ['청춘판 경극','젊은 배우와 현대 미학으로 클래식을 재해석'],
+          ['크로스 장르','경극+팝, +오페라, +애니메이션'],
+          ['디지털 경극','VR, 홀로그램, 온라인 생중계']
+        ],
+        videoDesc: '현대 경극 혁신 작품 하이라이트',
+        videoLabel: '현대 경극 보기'
+      }
+    }
+  },
+  {
+    level: 15,
+    videoSrc: 'https://search.bilibili.com/all?keyword=京剧传承保护',
+    text: {
+      zh: {
+        role: '梨园薪火', name: '传承——生生不息',
+        intro: '"梨园"是戏曲界的别称，源自唐玄宗设立的皇家戏曲学院。千年梨园，薪火相传。今天，中国戏曲学院培养新一代京剧传人，全国各地有百余个京剧院团。传承不是守旧，而是在尊重传统的基础上，让京剧活在当下、走向未来。',
+        facts: [
+          ['梨园由来','唐代(714年)，唐玄宗在长安设立"梨园"，亲自教习乐工，后世以此代称戏曲界'],
+          ['科班制度','富连成社(1904-1948)培养了"喜连富盛世"七科近700名学员'],
+          ['中国戏曲学院','唯一以"戏曲"命名的国字号高等艺术院校，培养了无数京剧人才'],
+          ['在册院团','全国有100余个专业京剧院团，每年演出逾万场'],
+          ['戏迷文化','京剧票友（业余爱好者）群体庞大，网络社群活跃，自发传承京剧文化']
+        ],
+        videoDesc: '京剧传承人讲述梨园薪火相传的故事',
+        videoLabel: '观看传承故事'
+      },
+      en: {
+        role: 'Legacy', name: 'Passing the Torch',
+        intro: '"Pear Garden" (Liyuan) is the traditional name for the opera world, dating back to Emperor Xuanzong\'s imperial academy in 714 AD. Today, over 100 professional troupes and countless enthusiasts keep Peking Opera alive - honoring tradition while embracing the future.',
+        facts: [
+          ['Origin','In 714 AD, Tang Emperor Xuanzong founded the "Pear Garden" to train performers'],
+          ['Training System','Fuliancheng Society (1904-1948) trained nearly 700 students over seven cohorts'],
+          ['National Academy','National Academy of Chinese Theatre Arts, the premier institution for opera training'],
+          ['Professional Troupes','Over 100 professional Peking Opera troupes nationwide, with 10,000+ annual performances'],
+          ['Fan Culture','Massive community of amateur enthusiasts (piaoyou) keeping the art alive through online and offline activities']
+        ],
+        videoDesc: 'Stories of Peking Opera inheritors passing the torch',
+        videoLabel: 'Watch Legacy Stories'
+      },
+      ja: {
+        role: '梨園薪火', name: '継承——永遠に',
+        intro: '「梨園」は演劇界の別称で、唐の玄宗皇帝が設立した宮廷演劇学校に由来（714年）。千年の梨園精神は現代に受け継がれ、全国100余の劇団と多くの愛好家が京劇を支えている。',
+        facts: [
+          ['梨園の由来','唐時代714年、玄宗皇帝が長安に「梨園」を設立し楽工を指導'],
+          ['科班制度','富連成社(1904-1948)は7期約700名の演者を育成'],
+          ['中国戯曲学院','「戯曲」を冠する唯一の国立高等芸術学院'],
+          ['登録劇団','全国100余の専門京劇団、年間1万回以上公演'],
+          ['ファン文化','アマチュア愛好家「票友」の巨大ネットワーク']
+        ],
+        videoDesc: '京劇継承者が語る梨園の物語',
+        videoLabel: '継承物語を見る'
+      },
+      ko: {
+        role: '계승', name: '이원의 불씨',
+        intro: '"이원(梨園)"은 연극계의 별칭으로 당나라 현종이 설립한 왕립 연극학교(714년)에서 유래합니다. 오늘날 100여 개 전문 극단과 수많은 애호가가 경극을 살아 숨 쉬게 합니다.',
+        facts: [
+          ['이원의 기원','714년 당 현종이 장안에 "이원"을 설립, 직접 악공을 가르침'],
+          ['과반 제도','부련성사(1904-1948)가 7기 약 700명의 연기자 양성'],
+          ['중국희곡학원','"희곡"을 명칭으로 하는 유일한 국립 고등 예술 대학'],
+          ['등록 극단','전국 100여 개 전문 경극단, 연간 1만 회 이상 공연'],
+          ['애호가 문화','아마추어 "표우"의 거대한 커뮤니티, 온오프라인 활동 활발']
+        ],
+        videoDesc: '경극 계승자가 들려주는 이원의 불씨 이야기',
+        videoLabel: '계승 이야기 보기'
+      }
+    }
+  }
+];
+
+let kcCurrentLang = 'zh';
+
+// ======================== 主界面多语言 ========================
+let uiLang = 'zh';
+const UI_TEXT = {
+  zh: {
+    score:'分 数', steps:'步 数', level:'第{0}关', masks:'脸谱：{0}/{1}',
+    energy:'锣鼓能量', energyVal:'{0}/100',
+    combo:{4:'四连绝妙！',5:'五连惊鸿！',6:'超级连击！'},
+    restart:'重新开局', cancelSkill:'取消技能', reshuffle:'重排棋盘',
+    winTitle:'满堂彩！', pass:'第{0}关通过', passRule:'每种脸谱≤2个',
+    scoreLine:'得分：{0}\u3000消除：{1}个脸谱', nextLevel:'下一关 ▶', retry:'再玩一次 ↺',
+    allClear:'全关通过！', kcBtn:'🎭 查看京剧知识卡', kcBackHome:'返回首页', stuckTitle:'卡住了…',
+    startMsg:'第{0}关：{1}\u3000不限步数，消到每种脸谱≤2个',
+    reshuffleTitle:'棋盘无路可走！', reshuffleFree:'免费重排', reshuffleAd:'📺 看广告重排',
+    reshuffleSkip:'不重排，结束此关',
+    skillCost:'{0}能量',
+    eliminated:'脸谱',
+    needEliminate:'需消除：{0} 个脸谱',
+    // 考核评级
+    gradeGold:'金牌·一流身手', gradeSilver:'银牌·身手娴熟', gradeBronze:'铜牌·初窥门径',
+    ratingScore:'你的得分', ratingSteps:'你的步数', ratingBest:'最佳'
+  },
+  en: {
+    score:'Score', steps:'Steps', level:'Level {0}', masks:'Masks: {0}/{1}',
+    energy:'Drum Energy', energyVal:'{0}/100',
+    combo:{4:'4 Combo!',5:'5 Combo!!',6:'Super Combo!!!'},
+    restart:'Restart', cancelSkill:'Cancel Skill', reshuffle:'Reshuffle',
+    winTitle:'Bravo!', pass:'Level {0} Passed', passRule:'Each type ≤ 2',
+    scoreLine:'Score: {0}\u3000Eliminated: {1}', nextLevel:'Next ▶', retry:'Retry ↺',
+    allClear:'All Clear!', kcBtn:'🎭 Opera Knowledge', kcBackHome:'Home', stuckTitle:'Stuck...',
+    startMsg:'Level {0}: {1}\u3000Unlimited moves, reduce each type to ≤2',
+    reshuffleTitle:'No moves left!', reshuffleFree:'Free Reshuffle', reshuffleAd:'📺 Ad Reshuffle',
+    reshuffleSkip:'Skip, end level',
+    skillCost:'{0} Energy',
+    eliminated:'masks',
+    needEliminate:'Need: {0} masks',
+    // Rating
+    gradeGold:'Gold · Elite', gradeSilver:'Silver · Skilled', gradeBronze:'Bronze · Novice',
+    ratingScore:'Your Score', ratingSteps:'Your Steps', ratingBest:'Best'
+  },
+  ja: {
+    score:'得 点', steps:'手 数', level:'第{0}関', masks:'臉譜：{0}/{1}',
+    energy:'鑼鼓エネルギー', energyVal:'{0}/100',
+    combo:{4:'四連絶妙！',5:'五連驚鴻！',6:'超連撃！'},
+    restart:'再挑戦', cancelSkill:'技取消', reshuffle:'盤面再配置',
+    winTitle:'大喝采！', pass:'第{0}関通過', passRule:'各種≤2個',
+    scoreLine:'得点：{0}\u3000消去：{1}個', nextLevel:'次へ ▶', retry:'もう一度 ↺',
+    allClear:'全関制覇！', kcBtn:'🎭 京劇知識', kcBackHome:'ホーム', stuckTitle:'手詰まり…',
+    startMsg:'第{0}関：{1}\u3000手数無制限、各種≤2個まで減らす',
+    reshuffleTitle:'手がありません！', reshuffleFree:'無料再配置', reshuffleAd:'📺 広告で再配置',
+    reshuffleSkip:'諦める',
+    skillCost:'{0}エネルギー',
+    eliminated:'個',
+    needEliminate:'必要：{0}個',
+    // 評価
+    gradeGold:'金牌·一流', gradeSilver:'銀牌·熟練', gradeBronze:'銅牌·入門',
+    ratingScore:'あなたの得点', ratingSteps:'あなたの手数', ratingBest:'ベスト'
+  },
+  ko: {
+    score:'점 수', steps:'걸음', level:'제{0}관', masks:'탈：{0}/{1}',
+    energy:'북 에너지', energyVal:'{0}/100',
+    combo:{4:'4연속!',5:'5연속!!',6:'슈퍼 콤보!!!'},
+    restart:'재시작', cancelSkill:'기술 취소', reshuffle:'재배치',
+    winTitle:'만채!', pass:'제{0}관 통과', passRule:'종류별 ≤2개',
+    scoreLine:'득점：{0}\u3000제거：{1}개', nextLevel:'다음 ▶', retry:'재도전 ↺',
+    allClear:'전관 통과!', kcBtn:'🎭 경극 지식', kcBackHome:'홈', stuckTitle:'막힘…',
+    startMsg:'제{0}관：{1}\u3000무제한 이동, 종류별 ≤2개까지',
+    reshuffleTitle:'움직일 수 없습니다!', reshuffleFree:'무료 재배치', reshuffleAd:'📺 광고 후 재배치',
+    reshuffleSkip:'포기',
+    skillCost:'{0} 에너지',
+    eliminated:'개',
+    needEliminate:'필요：{0}개',
+    // 평가
+    gradeGold:'금메달·일류', gradeSilver:'은메달·숙련', gradeBronze:'동메달·입문',
+    ratingScore:'당신의 점수', ratingSteps:'당신의 걸음', ratingBest:'최고'
+  }
+};
+function t(key) {
+  var map = UI_TEXT[uiLang] || UI_TEXT.zh;
+  var val = map[key];
+  if (val === undefined) return key;
+  return val;
+}
+function tf(key, args) {
+  var s = t(key);
+  for (var i = 0; i < args.length; i++) {
+    s = s.replace('{'+i+'}', args[i]);
+  }
+  return s;
+}
+function switchUiLang(lang) {
+  uiLang = lang;
+  // 更新语言按钮状态
+  document.querySelectorAll('.ui-lang-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  // 重绘整个UI
+  updateUI();
+}
+
+
+function getKcText() {
+  const idx = Math.min(currentLevel, KC_DATA.length - 1);
+  const card = KC_DATA[idx];
+  return card.text[kcCurrentLang] || card.text.zh;
+}
+
+// 考核评级：比较玩家分数/步数与最佳记录
+function calcRating(levelIdx) {
+  var best = BEST_RECORDS[levelIdx] || BEST_RECORDS[BEST_RECORDS.length - 1];
+  var s = score, t = stepCount;
+  var scoreBeat = s >= best.score;
+  var stepsBeat = t <= best.steps;
+  if (scoreBeat && stepsBeat) return { stars:3, cls:'gold', key:'gradeGold' };
+  if (scoreBeat || stepsBeat) return { stars:2, cls:'silver', key:'gradeSilver' };
+  return { stars:1, cls:'bronze', key:'gradeBronze' };
+}
+
+function showKnowledgeCard() {
+  document.getElementById('overlay').classList.remove('show');
+  const idx = Math.min(currentLevel, KC_DATA.length - 1);
+  const card = KC_DATA[idx];
+  const txt = card.text[kcCurrentLang] || card.text.zh;
+  const levelIdx = Math.min(currentLevel, BEST_RECORDS.length - 1);
+
+  const avatarImg = document.getElementById('kc-avatar');
+  const roleObj = ROLES.find(function(r) {
+    // 匹配行当：生→sheng, 旦→dan, 净→jing, 末→mo, 丑→chou
+    var ch = txt.role.charAt(0);
+    var map = { '生':'sheng', '旦':'dan', '净':'jing', '末':'mo', '丑':'chou', 'S':'sheng', 'D':'dan', 'J':'jing', 'M':'mo', 'C':'chou', '生':'sheng', '旦':'dan', '浄':'jing', '末':'mo', '丑':'chou', '생':'sheng', '단':'dan', '정':'jing', '말':'mo', '축':'chou' };
+    return r.pattern === map[ch];
+  });
+  if (roleObj && roleObj.img) {
+    avatarImg.src = roleObj.img; avatarImg.style.display = 'block';
+  } else {
+    avatarImg.style.display = 'none';
+  }
+  document.getElementById('kc-role').textContent  = txt.role;
+  document.getElementById('kc-name').textContent  = txt.name;
+  document.getElementById('kc-intro').textContent = txt.intro;
+  var factsEl = document.getElementById('kc-facts');
+  factsEl.innerHTML = txt.facts.map(function(f) {
+    return '<div class="kc-fact"><span class="kc-fact-label">▪ ' + f[0] + '：</span><span class="kc-fact-value">' + f[1] + '</span></div>';
+  }).join('');
+  document.getElementById('kc-video-desc').textContent = txt.videoDesc;
+  var videoUrlEl = document.getElementById('kc-video-url');
+  videoUrlEl.textContent = card.videoSrc;
+
+  // 考核评级
+  var rating = calcRating(levelIdx);
+  var best = BEST_RECORDS[levelIdx];
+  document.getElementById('kc-rating-stars').textContent = rating.stars === 3 ? '★★★' : rating.stars === 2 ? '★★' : '★';
+  var gradeEl = document.getElementById('kc-rating-grade');
+  gradeEl.textContent = t(rating.key);
+  gradeEl.className = 'kc-rating-grade ' + rating.cls;
+  document.getElementById('rc-my-score').textContent = score;
+  document.getElementById('rc-best-score').textContent = best.score;
+  document.getElementById('rc-my-steps').textContent = stepCount;
+  document.getElementById('rc-best-steps').textContent = best.steps;
+  // 标签显示
+  document.getElementById('kc-rating').querySelectorAll('.rc-best').forEach(function(el,i) {
+    el.firstChild.textContent = t('ratingBest');
+  });
+  var rcItems = document.getElementById('kc-rating').querySelectorAll('.rc-label');
+  if (rcItems.length >= 2) {
+    rcItems[0].textContent = t('ratingScore');
+    rcItems[1].textContent = t('ratingSteps');
+  }
+
+  // 更新语言按钮
+  var langBtns = document.querySelectorAll('.kc-lang-btn');
+  langBtns.forEach(function(b) {
+    b.classList.toggle('active', b.dataset.lang === kcCurrentLang);
+  });
+
+  // 最后一关：底部按钮改为"返回首页"
+  var nextBtn = document.getElementById('kc-next-btn');
+  var isLastLevel = (currentLevel >= LEVELS.length - 1);
+  nextBtn.textContent = isLastLevel ? t('kcBackHome') : t('nextLevel');
+  nextBtn.onclick = isLastLevel ? closeKcAndHome : closeKcAndNext;
+
+  document.getElementById('knowledge-card').classList.add('show');
+}
+
+function switchKcLang(lang) {
+  kcCurrentLang = lang;
+  showKnowledgeCard();
+}
+
+// 复制视频链接到剪贴板
+function copyVideoUrl() {
+  var url = document.getElementById('kc-video-url').textContent || '';
+  if (!url) return;
+  // 尝试 Clipboard API
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() {
+      showCopyDone();
+    }).catch(function() {
+      fallbackCopy(url);
+    });
+  } else {
+    fallbackCopy(url);
+  }
+}
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); showCopyDone(); } catch(e) {}
+  document.body.removeChild(ta);
+}
+function showCopyDone() {
+  var btn = document.getElementById('kc-copy-btn');
+  btn.textContent = '已复制!'; btn.classList.add('copied');
+  setTimeout(function() {
+    btn.textContent = '复制链接'; btn.classList.remove('copied');
+  }, 1500);
+}
+
+function closeKnowledgeCard() {
+  document.getElementById('knowledge-card').classList.remove('show');
+}
+
+function closeKcAndNext() {
+  closeKnowledgeCard();
+  overlayAction = 'next';
+  nextAction();
+}
+
+function closeKcAndHome() {
+  closeKnowledgeCard();
+  // 全部通关后返回首页（第一关重新开始）
+  currentLevel = 0; clearProgress();
+  startLevel();
+}
+
+// ======================== 游戏引擎 ========================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const COLS=8, ROWS=8;
+const CELL = canvas.width / COLS;
+let grid=[], selected=null, selectedSkill=null;
+let score=0, energy=0, stepCount=0;
+let masksEliminated=0, masksTotal=64, masksSpawned=64;
+let reshufflesLeft=2, reshuffleUsed=0; // 每关2次，0=未用免费，1=已用免费（下次需广告），2=用完
+let animating=false, gameOver=false;
+
+let roleImages = {};
+let imagesReady = false;
+
+function loadRoleImages() {
+  let loaded = 0;
+  ROLES.forEach(function(role) {
+    if (!role.img) { loaded++; return; }
+    var img = new Image();
+    img.onload = function() {
+      roleImages[role.id] = img;
+      loaded++;
+      if (loaded === ROLES.length) { imagesReady = true; drawBoard(); drawSkillIcons(); }
+    };
+    img.onerror = function() { loaded++; };
+    img.src = role.img;
+  });
+}
+loadRoleImages();
+
+function getLevelConfig() { return LEVELS[currentLevel] || LEVELS[LEVELS.length-1]; }
+
+function createGrid() {
+  var overallLimit = 800;
+  var overallAttempt = 0;
+
+  while (overallAttempt < overallLimit) {
+    overallAttempt++;
+
+    // 步骤1：完全随机填充
+    grid = [];
+    for (var r = 0; r < ROWS; r++) {
+      grid[r] = [];
+      for (var c = 0; c < COLS; c++) {
+        grid[r][c] = Math.floor(Math.random() * ROLES.length);
+      }
+    }
+
+    // 步骤2：逐格消除所有3连（置换为不会造成新3连的类型）
+    var cascadeLimit = 500;
+    var matches = findMatches();
+    while (matches.length > 0 && cascadeLimit > 0) {
+      cascadeLimit--;
+      // 每次只处理一个匹配位置，降低震荡
+      var m = matches[0];
+      var oldType = grid[m.r][m.c];
+      var newType = -1;
+      // 尝试所有类型，选第一个不会造成3连的
+      for (var t = 0; t < ROLES.length; t++) {
+        if (t === oldType) continue;
+        grid[m.r][m.c] = t;
+        if (!wouldMatch(m.r, m.c, t)) { newType = t; break; }
+      }
+      if (newType === -1) {
+        // 所有类型都被堵死（极端罕见），随机换一个
+        grid[m.r][m.c] = (oldType + 1 + Math.floor(Math.random() * (ROLES.length - 1))) % ROLES.length;
+      }
+      matches = findMatches();
+    }
+
+    // 步骤3：检查是否可用
+    if (matches.length === 0 && hasValidMoves()) return;
+  }
+
+  // 极端兜底：用确定性模式填充（保证无3连且有可消路径）
+  for (var r = 0; r < ROWS; r++) {
+    grid[r] = [];
+    for (var c = 0; c < COLS; c++) {
+      grid[r][c] = (r * 3 + c * 2) % ROLES.length;
+    }
+  }
+}
+
+function wouldMatch(r,c,type) {
+  // 检查在(r,c)放type是否会形成3消（同行/列同一类型≥3个，中间可以有空格但不能有其他脸谱阻断）
+  // 水平方向
+  var hPositions = [];
+  for (var cc = 0; cc < COLS; cc++) {
+    if (cc === c || grid[r][cc] === type) hPositions.push(cc);
+  }
+  if (hPositions.length >= 3) {
+    // 找到c在hPositions中的位置，向左右扩展看是否与相邻同类型之间无阻断
+    var idx = hPositions.indexOf(c);
+    var left = idx;
+    while (left > 0) {
+      var blocked = false;
+      for (var mid = hPositions[left-1]+1; mid < hPositions[left]; mid++) {
+        if (grid[r][mid] !== -1) { blocked = true; break; }
+      }
+      if (blocked) break;
+      left--;
+    }
+    var right = idx;
+    while (right < hPositions.length-1) {
+      var blocked = false;
+      for (var mid = hPositions[right]+1; mid < hPositions[right+1]; mid++) {
+        if (grid[r][mid] !== -1) { blocked = true; break; }
+      }
+      if (blocked) break;
+      right++;
+    }
+    if (right - left + 1 >= 3) return true;
+  }
+  // 垂直方向
+  var vPositions = [];
+  for (var rr = 0; rr < ROWS; rr++) {
+    if (rr === r || (grid[rr] && grid[rr][c] === type)) vPositions.push(rr);
+  }
+  if (vPositions.length >= 3) {
+    var idx = vPositions.indexOf(r);
+    var top = idx;
+    while (top > 0) {
+      var blocked = false;
+      for (var mid = vPositions[top-1]+1; mid < vPositions[top]; mid++) {
+        if (grid[mid] && grid[mid][c] !== -1) { blocked = true; break; }
+      }
+      if (blocked) break;
+      top--;
+    }
+    var bottom = idx;
+    while (bottom < vPositions.length-1) {
+      var blocked = false;
+      for (var mid = vPositions[bottom]+1; mid < vPositions[bottom+1]; mid++) {
+        if (grid[mid] && grid[mid][c] !== -1) { blocked = true; break; }
+      }
+      if (blocked) break;
+      bottom++;
+    }
+    if (bottom - top + 1 >= 3) return true;
+  }
+  return false;
+}
+
+function countRemaining() {
+  var count = 0;
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) if (grid[r][c] !== -1) count++;
+  return count;
+}
+
+// 按种类统计剩余脸谱，返回每种的数量数组 [sheng, dan, jing, mo, chou]
+function countByType() {
+  var counts = [0, 0, 0, 0, 0];
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+    var t = grid[r][c];
+    if (t !== -1 && t >= 0 && t < 5) counts[t]++;
+  }
+  return counts;
+}
+
+// 通关条件：每种脸谱剩余数量 <= 2（即不存在某种脸谱剩余 >= 3 个），第2关起还需所有脸谱已落入棋盘
+function checkWin() {
+  var lv = getLevelConfig();
+  // 第2关起：必须等所有脸谱都落下后才能判定胜利
+  if (currentLevel > 0 && masksSpawned < lv.masksTarget) return false;
+  var counts = countByType();
+  for (var i = 0; i < counts.length; i++) {
+    if (counts[i] >= 3) return false; // 有某种脸谱剩余 >= 3，还未过关
+  }
+  return true;
+}
+
+function hasValidMoves() {
+  // 先检查通关条件：如果已经过关，不应该触发重排/失败
+  if (checkWin()) return true;
+  // 对每个脸谱，模拟将其拖到同行/同列的每个目标格，检查是否产生消除
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      if (grid[r][c] === -1) continue;
+      // 模拟拖到同行的每个位置
+      for (var tc = 0; tc < COLS; tc++) {
+        if (tc === c) continue;
+        // 临时执行 slidePiece
+        slidePiece(r, c, r, tc);
+        var m = findMatches().length > 0;
+        slidePiece(r, tc, r, c); // 还原
+        if (m) return true;
+      }
+      // 模拟拖到同列的每个位置
+      for (var tr = 0; tr < ROWS; tr++) {
+        if (tr === r) continue;
+        slidePiece(r, c, tr, c);
+        var m2 = findMatches().length > 0;
+        slidePiece(tr, c, r, c); // 还原
+        if (m2) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function swap(r1,c1,r2,c2){var t=grid[r1][c1];grid[r1][c1]=grid[r2][c2];grid[r2][c2]=t;}
+
+// 3消判定：同行/列同一类型≥3个即视为匹配，中间可以有空格但不能有其他脸谱阻断
+function findMatches() {
+  var matched = new Set();
+  // 水平：逐行按类型收集位置，分组（组内只有空格无其他脸谱）
+  for (var r = 0; r < ROWS; r++) {
+    var typeCols = {};
+    for (var c = 0; c < COLS; c++) {
+      var t = grid[r][c];
+      if (t === -1) continue;
+      if (!typeCols[t]) typeCols[t] = [];
+      typeCols[t].push(c);
+    }
+    for (var key in typeCols) {
+      var cols = typeCols[key];
+      if (cols.length < 3) continue;
+      var start = 0; // 当前组的起始索引
+      for (var i = 1; i <= cols.length; i++) {
+        var broken = false;
+        if (i < cols.length) {
+          for (var mid = cols[i-1]+1; mid < cols[i]; mid++) {
+            if (grid[r][mid] !== -1) { broken = true; break; }
+          }
+        }
+        if (broken || i === cols.length) {
+          if (i - start >= 3) {
+            for (var j = start; j < i; j++) matched.add(r + ',' + cols[j]);
+          }
+          start = i;
+        }
+      }
+    }
+  }
+  // 垂直：逐列按类型收集位置
+  for (var c = 0; c < COLS; c++) {
+    var typeRows = {};
+    for (var r = 0; r < ROWS; r++) {
+      var t = grid[r][c];
+      if (t === -1) continue;
+      if (!typeRows[t]) typeRows[t] = [];
+      typeRows[t].push(r);
+    }
+    for (var key in typeRows) {
+      var rows = typeRows[key];
+      if (rows.length < 3) continue;
+      var start = 0;
+      for (var i = 1; i <= rows.length; i++) {
+        var broken = false;
+        if (i < rows.length) {
+          for (var mid = rows[i-1]+1; mid < rows[i]; mid++) {
+            if (grid[mid] && grid[mid][c] !== -1) { broken = true; break; }
+          }
+        }
+        if (broken || i === rows.length) {
+          if (i - start >= 3) {
+            for (var j = start; j < i; j++) matched.add(rows[j] + ',' + c);
+          }
+          start = i;
+        }
+      }
+    }
+  }
+  var result = Array.from(matched).map(function(s){var p=s.split(',');return{r:parseInt(p[0]),c:parseInt(p[1])};});
+  // 调试：打印每行每列的类型分布（仅在找到匹配或疑似漏检时触发）
+  if (result.length > 0) {
+    var typeNames = ['生','旦','净','末','丑'];
+    var summary = [];
+    for (var rr = 0; rr < ROWS; rr++) {
+      var rowStr = '';
+      for (var cc = 0; cc < COLS; cc++) {
+        var tt = grid[rr][cc];
+        rowStr += (tt === -1 ? '_' : typeNames[tt]) + ' ';
+      }
+      summary.push('  row'+rr+': [' + rowStr.trim() + ']');
+    }
+    console.log('[findMatches] found '+result.length+' matches:\n' + summary.join('\n') + '\n  matched: ' + result.map(function(m){return '('+m.r+','+m.c+')'+typeNames[grid[m.r][m.c]];}).join(' '));
+  }
+  return result;
+}
+
+function refillEmptyCells() {
+  // 第1关（currentLevel===0）：空位不补充，脸谱越来越少直至棋盘变空
+  if (currentLevel === 0) return;
+  // 第2关起：空位从上方落入新脸谱补充，但不超过关卡目标总数
+  var lv = getLevelConfig();
+  var remaining = lv.masksTarget - masksSpawned;
+  if (remaining <= 0) return;
+  for (var c = 0; c < COLS; c++) {
+    for (var r = 0; r < ROWS; r++) {
+      if (grid[r][c] === -1 && remaining > 0) {
+        grid[r][c] = Math.floor(Math.random() * ROLES.length);
+        masksSpawned++; remaining--;
+      }
+    }
+  }
+}
+
+function processMatches(matches) {
+  var maxLen=0;
+  var byType={};
+  matches.forEach(function(m){
+    var type=grid[m.r][m.c];
+    if(!byType[type]) byType[type]=0;
+    byType[type]++; maxLen=Math.max(maxLen,byType[type]);
+  });
+  // 计分
+  matches.forEach(function(m){
+    var type=grid[m.r][m.c], len=byType[type];
+    score+=len===3?15:len===4?40:len===5?100:len*25;
+    energy=Math.min(100,energy+(len===3?5:len===4?12:len>=5?20:len*4));
+    if(len>=4) showCombo(len,m.r,m.c);
+  });
+  // 累计脸谱消除数
+  masksEliminated += matches.length;
+  matches.forEach(function(m){grid[m.r][m.c]=-1;});
+  updateUI();
+  return maxLen;
+}
+
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+async function playTurn(r1,c1,r2,c2) {
+  if(animating||gameOver) return;
+  if(selectedSkill){useSkill(selectedSkill,r1,c1);return;}
+  initAudio();
+  swap(r1,c1,r2,c2);
+  var matches=findMatches();
+  if(matches.length===0){swap(r1,c1,r2,c2);sfxFail();return;}
+  stepCount++; // 有效交换，步数+1
+  animating=true; selected=null; updateUI();
+  await animateSwap(r1,c1,r2,c2);
+  var safetyRounds=0;
+  while(matches.length>0||safetyRounds<3) {
+    if(matches.length===0){
+      safetyRounds++;
+      console.log('[playTurn] safety check #'+safetyRounds);
+      matches=findMatches();
+      if(matches.length===0){console.log('[playTurn] safety confirmed');break;}
+      console.warn('[playTurn] FOUND LEAKED matches='+matches.length);
+    }
+    var maxLen=processMatches(matches); sfxMatch(maxLen);
+    await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
+    matches=findMatches();
+  }
+  drawBoard();
+  // 检查通关
+  if(checkWin()) { endGame(true); return; }
+  // 检查是否卡死（无路可走）
+  if(!hasValidMoves()) {
+    if(reshufflesLeft > 0) {
+      showReshuffleModal();
+    } else {
+      endGame(false);
+    }
+    return;
+  }
+  animating=false; updateUI();
+}
+
+// ======================== 重排逻辑 ========================
+function showReshuffleModal() {
+  animating = true;
+  var remaining = countRemaining();
+  document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
+  document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
+  var freeBtn = document.getElementById('reshuffle-free-btn');
+  var adBtn = document.getElementById('reshuffle-ad-btn');
+  if (reshufflesLeft >= 2) {
+    freeBtn.style.display = 'inline-block';
+    freeBtn.textContent = '🎲 '+t('reshuffleFree')+'（剩2次）';
+    adBtn.style.display = 'none';
+  } else if (reshufflesLeft === 1) {
+    freeBtn.style.display = 'none';
+    adBtn.style.display = 'inline-block';
+    adBtn.textContent = t('reshuffleAd')+'（最后1次）';
+  }
+  document.getElementById('reshuffle-modal').classList.add('show');
+}
+
+function closeReshuffleModal() {
+  document.getElementById('reshuffle-modal').classList.remove('show');
+  animating = false;
+  endGame(false);
+}
+
+function doReshuffle(needsAd) {
+  document.getElementById('reshuffle-modal').classList.remove('show');
+  if (needsAd) {
+    // 模拟看广告（实际部署时接入广告SDK）
+    showMessage('正在播放广告…');
+    setTimeout(function() {
+      executeReshuffle();
+      showMessage('广告结束，棋盘已重排！');
+    }, 1500);
+  } else {
+    executeReshuffle();
+    showMessage('棋盘已重排！');
+  }
+}
+
+function executeReshuffle() {
+  reshufflesLeft--;
+  reshuffleUsed++;
+  sfxReshuffle();
+  // 只打乱棋盘上剩余脸谱的位置，不补充新脸谱、不触发连锁消除
+  var shuffleAttempts = 0;
+  var ok = false;
+  while (shuffleAttempts < 200 && !ok) {
+    shuffleBoard();
+    if (hasValidMoves()) {
+      ok = true;
+    }
+    shuffleAttempts++;
+  }
+  // 极端情况下（200次都无解），保持最后一次打乱结果交给用户处理
+  drawBoard();
+  // 重排后检查是否意外出现了可消匹配，有则自动连锁消除
+  var afterShuffleMatches = findMatches();
+  if (afterShuffleMatches.length > 0) {
+    console.log('[reshuffle] found ' + afterShuffleMatches.length + ' matches, auto-clearing...');
+    animating = true;
+    (async function() {
+      var safetyRounds = 0;
+      var matches = afterShuffleMatches;
+      while (matches.length > 0 || safetyRounds < 3) {
+        if (matches.length === 0) {
+          safetyRounds++;
+          matches = findMatches();
+          if (matches.length === 0) { console.log('[reshuffle-chain] safety confirmed'); break; }
+        }
+        var maxLen = processMatches(matches); sfxMatch(maxLen);
+        await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
+        matches = findMatches();
+      }
+      drawBoard();
+      if (checkWin()) { endGame(true); return; }
+      if (!hasValidMoves()) {
+        if (reshufflesLeft > 0) { showReshuffleModal(); }
+        else { endGame(false); }
+        return;
+      }
+      animating = false; updateUI();
+    })();
+  } else {
+    animating = false;
+    updateUI();
+  }
+}
+
+function manualReshuffle() {
+  if (animating || gameOver) return;
+  if (reshufflesLeft <= 0) {
+    showMessage('重排次数已用完！');
+    sfxFail();
+    return;
+  }
+  // 统一走弹窗流程，确保玩家看到确认界面
+  showReshuffleModal();
+}
+
+function shuffleBoard() {
+  var pieces=[], positions=[];
+  for(var r=0;r<ROWS;r++) for(var c=0;c<COLS;c++) {
+    if(grid[r][c]!==-1){pieces.push(grid[r][c]);positions.push({r:r,c:c});}
+  }
+  for(var i=pieces.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=pieces[i];pieces[i]=pieces[j];pieces[j]=t;}
+  for(var i=0;i<pieces.length;i++){grid[positions[i].r][positions[i].c]=pieces[i];}
+}
+
+// ======================== 技能 ========================
+function selectSkill(skill) {
+  if(gameOver||animating) return;
+  if(energy<30){showMessage('能量不足！需要30点');sfxFail();return;}
+  if(selectedSkill===skill){cancelSkill();return;}
+  initAudio(); selectedSkill=skill; sfxSelect();
+  document.querySelectorAll('.skill-btn').forEach(function(b){b.classList.remove('skill-selected');});
+  document.querySelector('[data-skill="'+skill+'"]').classList.add('skill-selected');
+  var msgs={sheng:'点击一行，横扫千军！',dan:'点击一列，水袖轻拂！',jing:'点击棋盘，花脸震天！',mo:'点兵点将，步数+5！',chou:'丑角登场，乱中求变！'};
+  showMessage(msgs[skill]);
+}
+
+function cancelSkill() {
+  selectedSkill=null;
+  document.querySelectorAll('.skill-btn').forEach(function(b){b.classList.remove('skill-selected');});
+  hideMessage(); drawBoard();
+}
+
+function useSkill(skill,row,col) {
+  if(energy<30) return;
+  animating=true; energy-=30; sfxSkill();
+  switch(skill) {
+    case 'sheng': for(var c=0;c<COLS;c++) grid[row][c]=-1; showMessage('生·长缨横扫！'); break;
+    case 'dan': for(var r=0;r<ROWS;r++) grid[r][col]=-1; showMessage('旦·水袖轻拂！'); break;
+    case 'jing':
+      for(var dr=-1;dr<=1;dr++) for(var dc=-1;dc<=1;dc++) {
+        var nr=row+dr,nc=col+dc; if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) grid[nr][nc]=-1;
+      }
+      score+=150; showMessage('净·花脸震天！'); break;
+    case 'mo': showMessage('末·老生点兵！步数无限，尽情畅玩！'); break;
+    case 'chou': shuffleBoard(); showMessage('丑·丑角逗趣！'); break;
+  }
+  // 技能清理也算消除（生/旦/净一行一列全部消除）
+  var countBefore = masksEliminated;
+  // 计算实际被清除的棋子数
+  var cleared = 0;
+  for(var rr=0;rr<ROWS;rr++) for(var cc=0;cc<COLS;cc++) if(grid[rr][cc]===-1) cleared++;
+  // 注意：-1的格子被refillEmptyCells填充后会变回数字，这里要赶在refill前计数
+  // 直接在setToDone前计算：遍历grid中-1的数量
+  masksEliminated += cleared;
+  selectedSkill=null;
+  document.querySelectorAll('.skill-btn').forEach(function(b){b.classList.remove('skill-selected');});
+  refillEmptyCells(); drawBoard(); updateUI();
+  setTimeout(function(){
+    var matches=findMatches();
+    (async function(){
+      while(matches.length>0){
+        var maxLen=processMatches(matches);sfxMatch(maxLen);
+        await animateClear();refillEmptyCells();await animateDrop();drawBoard();await sleep(180);matches=findMatches();
+      }
+      animating=false;
+      if(checkWin()){endGame(true);return;}
+      if(!hasValidMoves()){
+        if(reshufflesLeft>0){showReshuffleModal();}
+        else{endGame(false);}
+        return;
+      }
+      updateUI(); hideMessage();
+    })();
+  },400);
+}
+
+// ======================== 动画 ========================
+async function animateSwap(r1,c1,r2,c2) {
+  var x1=c1*CELL+CELL/2,y1=r1*CELL+CELL/2,x2=c2*CELL+CELL/2,y2=r2*CELL+CELL/2;
+  var t1=grid[r2][c2],t2=grid[r1][c1];
+  for(var t=0;t<=8;t++){
+    drawBoard();
+    var prog=t/8;
+    drawFaceMask(ctx,x1+(x2-x1)*prog,y1+(y2-y1)*prog,CELL*0.38,ROLES[t1],false,t1);
+    drawFaceMask(ctx,x2+(x1-x2)*prog,y2+(y1-y2)*prog,CELL*0.38,ROLES[t2],false,t2);
+    await sleep(16);
+  }
+}
+async function animateClear(){for(var t=0;t<4;t++){drawBoard(t%2===0?'rgba(255,255,255,0.2)':null);await sleep(40);}}
+async function animateDrop(){drawBoard();await sleep(100);}
+
+function drawBoard(flash) {
+  try {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#2d1a0a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'rgba(180,140,60,0.15)';
+    ctx.lineWidth = 0.8;
+    for (var i = 0; i <= COLS; i++) {
+      ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, canvas.height); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(canvas.width, i * CELL); ctx.stroke();
+    }
+    // 拖拽高亮：起点框 + 目标高亮
+    var dragSrcR = -1, dragSrcC = -1, dragDstR = -1, dragDstC = -1;
+    if (dragState.active) {
+      dragSrcR = dragState.startRow; dragSrcC = dragState.startCol;
+      if (dragState.locked) {
+        dragDstR = dragState.curRow; dragDstC = dragState.curCol;
+        if (dragSrcR === dragDstR && dragSrcC === dragDstC) { dragDstR = dragDstC = -1; }
+      }
+    }
+    // 绘制所有棋子（拖拽的起点棋子跳过，后面单独画到目标位置）
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var type = grid[r][c];
+        if (type === -1) continue;
+        // 拖拽中的起点棋子：画淡色虚影在原位
+        if (dragSrcR === r && dragSrcC === c) {
+          ctx.globalAlpha = 0.3;
+          var role2 = ROLES[type];
+          if (role2) drawFaceMask(ctx, c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.38, role2, false, type);
+          ctx.globalAlpha = 1;
+          continue;
+        }
+        var role = ROLES[type];
+        if (!role) continue;
+        var cx2 = c * CELL + CELL / 2, cy2 = r * CELL + CELL / 2;
+        var isSel = selected && selected.row === r && selected.col === c;
+        drawFaceMask(ctx, cx2, cy2, CELL * 0.38, role, isSel, type);
+      }
+    }
+    // 拖拽：起点框 + 目标虚影
+    if (dragSrcR >= 0 && dragDstR >= 0) {
+      // 起点金色虚线框
+      ctx.save();
+      ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3; ctx.setLineDash([6, 3]);
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.rect(dragSrcC * CELL + 2, dragSrcR * CELL + 2, CELL - 4, CELL - 4); ctx.stroke();
+      ctx.shadowBlur = 0;
+      // 目标亮框
+      ctx.strokeStyle = 'rgba(255,215,0,0.7)'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.rect(dragDstC * CELL + 1, dragDstR * CELL + 1, CELL - 2, CELL - 2); ctx.stroke();
+      // 目标位置画拖拽中的棋子（实色）
+      var srcType = grid[dragState.startRow][dragState.startCol];
+      if (srcType !== -1) {
+        var srcRole = ROLES[srcType];
+        if (srcRole) drawFaceMask(ctx, dragDstC * CELL + CELL / 2, dragDstR * CELL + CELL / 2, CELL * 0.38, srcRole, true, srcType);
+      }
+      // 连线箭头指示
+      var sx = dragSrcC * CELL + CELL / 2, sy = dragSrcR * CELL + CELL / 2;
+      var ex = dragDstC * CELL + CELL / 2, ey = dragDstR * CELL + CELL / 2;
+      ctx.strokeStyle = 'rgba(255,215,0,0.3)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    } else if (dragSrcR >= 0) {
+      // 尚未拖出方向，仅高亮起点
+      ctx.save();
+      ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.rect(dragSrcC * CELL + 2, dragSrcR * CELL + 2, CELL - 4, CELL - 4); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.restore();
+    }
+    if (flash) { ctx.fillStyle = flash; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+  } catch (e) { console.error('drawBoard error:', e); }
+}
+
+// ======================== UI ========================
+function updateUI() {
+  var lv=getLevelConfig();
+  document.getElementById('score').textContent=score;
+  document.getElementById('step-count').textContent=stepCount;
+  document.getElementById('energy-text').textContent=tf('energyVal',[energy]);
+  document.getElementById('energy-bar-fill').style.width=energy+'%';
+  document.getElementById('level-info').textContent=tf('level',[lv.level])+'　'+lv.title;
+  // 显示各类剩余
+  var types = countByType();
+  var typeInfo = ROLES.map(function(r,i){ return r.name+'×'+types[i]; }).join('　');
+  var remainingTarget = masksTotal - masksEliminated;
+  document.getElementById('mask-info').textContent='还需消除：'+remainingTarget+'/'+masksTotal+'　|　'+typeInfo;
+  document.querySelectorAll('.skill-btn').forEach(function(b){b.classList.toggle('disabled',energy<30);});
+  // 更新重排按钮状态
+  var rb = document.getElementById('manual-reshuffle-btn');
+  rb.disabled = (reshufflesLeft <= 0);
+  if (reshufflesLeft >= 2) {
+    rb.textContent = t('reshuffle')+'（免）';
+    rb.classList.remove('ad-needed');
+  } else if (reshufflesLeft === 1) {
+    rb.textContent = t('reshuffle')+'（广告）';
+    rb.classList.add('ad-needed');
+  } else {
+    rb.textContent = t('reshuffle')+'已用完';
+    rb.classList.remove('ad-needed');
+  }
+  // 更新底部按钮文字
+  document.querySelector('#bottom-area .ctrl-btn:nth-child(1)').textContent = t('restart');
+  document.querySelector('#bottom-area .ctrl-btn:nth-child(2)').textContent = t('cancelSkill');
+  // 更新能量标签
+  document.querySelector('#energy-label span:first-child').textContent = t('energy');
+  // 更新分数/步数标签
+  document.querySelector('#score-box:first-of-type .label').textContent = t('score');
+  document.querySelector('#score-box:last-of-type .label').textContent = t('steps');
+  // 更新技能按钮文字
+  var skillNames = ['sheng','dan','jing','mo','chou'];
+  document.querySelectorAll('.skill-btn').forEach(function(b,i){
+    var nameEl = b.querySelector('.skill-name');
+    var costEl = b.querySelector('.skill-cost');
+    if (nameEl) nameEl.textContent = ROLES[i].name+'·'+ROLES[i].skill;
+    if (costEl) costEl.textContent = tf('skillCost',[30]);
+  });
+}
+
+function showMessage(msg){
+  var el=document.getElementById('message');el.textContent=msg;el.classList.add('show');
+  clearTimeout(el._t);el._t=setTimeout(function(){el.classList.remove('show');},2000);
+}
+function hideMessage(){document.getElementById('message').classList.remove('show');}
+
+function showCombo(len,r,c){
+  var popup=document.createElement('div');
+  popup.className='combo-popup';
+  popup.textContent=UI_TEXT[uiLang].combo[len]||(len+'!');
+  popup.style.color=len>=5?'#FF4500':'#FFD700';
+  popup.style.left=(30+c/COLS*360)+'px';
+  popup.style.top=(96+r/ROWS*374)+'px';
+  document.getElementById('container').appendChild(popup);
+  setTimeout(function(){popup.remove();},1000);
+}
+
+function endGame(won) {
+  gameOver=true; animating=false;
+  var lv=getLevelConfig();
+  var overlay=document.getElementById('overlay');
+  if(won) {
+    document.getElementById('overlay-title').textContent=t('winTitle');
+    document.getElementById('overlay-title').style.color='#FFD700';
+    document.getElementById('overlay-desc').textContent=tf('pass',[lv.level])+'　'+lv.title+'　'+t('passRule');
+    document.getElementById('overlay-score').textContent=tf('scoreLine',[score,masksEliminated]);
+    if(currentLevel<LEVELS.length-1){
+      document.getElementById('overlay-btn').textContent=t('nextLevel'); overlayAction='next';
+    } else {
+      document.getElementById('overlay-btn').textContent=t('retry'); overlayAction='retry';
+      document.getElementById('overlay-title').textContent=t('allClear');
+    }
+    document.getElementById('overlay-kc-btn').textContent = t('kcBtn');
+    document.getElementById('overlay-kc-btn').style.display = 'block';
+    // 通关时立即保存进度（下一关的起始关）
+    saveProgress(Math.min(currentLevel + 1, LEVELS.length - 1));
+    sfxJinghu();
+  } else {
+    document.getElementById('overlay-title').textContent=t('stuckTitle');
+    document.getElementById('overlay-title').style.color='#FF4444';
+    var remaining = countRemaining();
+    var types = countByType();
+    var stuckTypes = [];
+    ROLES.forEach(function(r,i){ if(types[i]>=2) stuckTypes.push(r.name+'×'+types[i]); });
+    document.getElementById('overlay-desc').textContent=tf('level',[lv.level])+'　剩余'+remaining+'个，重排次数用完'
+      +(stuckTypes.length>0 ? '　'+stuckTypes.join(' ') : '');
+    document.getElementById('overlay-score').textContent=tf('scoreLine',[score,masksEliminated]);
+    document.getElementById('overlay-btn').textContent=t('retry'); overlayAction='retry';
+    document.getElementById('overlay-kc-btn').style.display = 'none';
+    sfxFail();
+  }
+  overlay.classList.add('show');
+}
+
+function saveProgress(lvl) {
+  if (lvl === undefined) lvl = currentLevel;
+  try { localStorage.setItem('liyuan_level', String(lvl)); } catch(e) {}
+}
+function loadProgress() {
+  try {
+    var v = localStorage.getItem('liyuan_level');
+    if (v !== null) { var n = parseInt(v, 10); if (!isNaN(n) && n >= 0 && n < LEVELS.length) return n; }
+  } catch(e) {}
+  return 0;
+}
+function clearProgress() {
+  try { localStorage.removeItem('liyuan_level'); } catch(e) {}
+}
+
+function nextAction() {
+  document.getElementById('overlay').classList.remove('show');
+  if(overlayAction==='next') {
+    currentLevel=Math.min(currentLevel+1,LEVELS.length-1);
+    saveProgress();
+  }
+  startLevel();
+}
+
+async function startLevel(skipCurtain) {
+  var lv=getLevelConfig();
+  score=0; stepCount=0; masksTotal=lv.masksTarget; masksEliminated=0; masksSpawned=64;
+  energy=0;
+  reshufflesLeft=2; reshuffleUsed=0;
+  selected=null; selectedSkill=null; gameOver=false; animating=true;
+  cancelSkill(); createGrid(); updateUI();
+  document.getElementById('toast').className='';
+  hideMessage();
+  if (!skipCurtain) {
+    initAudio();
+    await playOpeningCurtain(currentLevel);
+  }
+  animating=false;
+  drawBoard();
+  showMessage(tf('startMsg',[lv.level,lv.title]));
+}
+
+function resetLevel() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('reshuffle-modal').classList.remove('show');
+  overlayAction='retry';
+  startLevel(true);
+}
+
+// ======================== 输入（点击选择 + 拖拽跨格直行） ========================
+// dragState: { active, startRow, startCol, curRow, curCol, dir, locked }
+// dir: 'h' 水平 / 'v' 垂直 / null 未锁定
+// 拖拽直行：沿行或列滑动棋子到目标位置，中间棋子依次移位
+let dragState = {
+  active: false, startRow: -1, startCol: -1,
+  curRow: -1, curCol: -1, dir: null, locked: false
+};
+let dragMovedEnough = false; // 是否已拖过阈值，区分点击和拖拽
+
+function getCellFromEvent(e, touchIdx) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX, clientY;
+  if (touchIdx !== undefined) {
+    clientX = e.touches[touchIdx].clientX; clientY = e.touches[touchIdx].clientY;
+  } else {
+    clientX = e.clientX; clientY = e.clientY;
+  }
+  var x = (clientX - rect.left) * (canvas.width / rect.width);
+  var y = (clientY - rect.top) * (canvas.height / rect.height);
+  return { col: Math.floor(x / CELL), row: Math.floor(y / CELL), x: x, y: y };
+}
+
+// 将棋子从 (r1,c1) 滑到 (r2,c2)，中间棋子依次移位。要求同行或同列。
+function slidePiece(r1, c1, r2, c2) {
+  if (r1 === r2 && c1 === c2) return;
+  var piece = grid[r1][c1];
+  if (r1 === r2) {
+    var d = c2 > c1 ? 1 : -1;
+    for (var c = c1; c !== c2; c += d) { grid[r1][c] = grid[r1][c + d]; }
+    grid[r1][c2] = piece;
+  } else if (c1 === c2) {
+    var d = r2 > r1 ? 1 : -1;
+    for (var r = r1; r !== r2; r += d) { grid[r][c1] = grid[r + d][c1]; }
+    grid[r2][c1] = piece;
+  }
+}
+
+function handlePointerDown(cell) {
+  if (cell.row < 0 || cell.row >= ROWS || cell.col < 0 || cell.col >= COLS) return;
+  if (grid[cell.row][cell.col] === -1) return; // 空格子不响应
+
+  // 技能模式
+  if (selectedSkill) {
+    if (selectedSkill === 'mo') { useSkill('mo', 0, 0); return; }
+    useSkill(selectedSkill, cell.row, cell.col); return;
+  }
+
+  // 开始拖拽追踪（保留 selected 状态，由 mouseup 统一处理）
+  dragState.active = true;
+  dragState.startRow = cell.row; dragState.startCol = cell.col;
+  dragState.curRow = cell.row; dragState.curCol = cell.col;
+  dragState.dir = null; dragState.locked = false;
+  dragMovedEnough = false;
+  sfxSelect(); drawBoard();
+}
+
+function handlePointerMove(e, touchIdx) {
+  if (!dragState.active || animating || gameOver) return;
+  var cell = getCellFromEvent(e, touchIdx);
+  var dx = cell.x - (dragState.startCol * CELL + CELL / 2);
+  var dy = cell.y - (dragState.startRow * CELL + CELL / 2);
+  var threshold = CELL * 0.32;
+
+  // 方向锁定：第一次超过阈值时锁定水平/垂直方向
+  if (!dragState.locked) {
+    if (Math.abs(dx) > threshold && Math.abs(dx) >= Math.abs(dy)) {
+      dragState.dir = 'h'; dragState.locked = true; dragMovedEnough = true;
+    } else if (Math.abs(dy) > threshold) {
+      dragState.dir = 'v'; dragState.locked = true; dragMovedEnough = true;
+    } else {
+      return; // 还没拖到阈值，不更新
+    }
+  }
+
+  // 已锁定方向：计算约束位置
+  if (dragState.dir === 'h') {
+    dragState.curRow = dragState.startRow;
+    dragState.curCol = Math.max(0, Math.min(COLS - 1, cell.col));
+  } else {
+    dragState.curCol = dragState.startCol;
+    dragState.curRow = Math.max(0, Math.min(ROWS - 1, cell.row));
+  }
+  drawBoard();
+}
+
+function handlePointerUp() {
+  if (!dragState.active) return;
+
+  var sr = dragState.startRow, sc = dragState.startCol;
+  var tr = dragState.curRow, tc = dragState.curCol;
+  var handledByDrag = false; // 标记是否由拖拽+消除异步路径接管
+
+  if (dragMovedEnough && (tr !== sr || tc !== sc)) {
+    // 拖拽结束：执行跨格直行滑动（允许拖到空格）
+    slidePiece(sr, sc, tr, tc);
+    initAudio();
+    // 滑动后检查是否有消除
+    var matches = findMatches();
+    console.log('[drag] slide ('+sr+','+sc+')->('+tr+','+tc+'), matches='+matches.length,
+      matches.map(function(m){return '('+m.r+','+m.c+')'+grid[m.r][m.c];}).join(' '));
+    if (matches.length > 0) {
+      stepCount++; updateUI(); // 拖拽滑动算一步
+      handledByDrag = true; // 异步路径接管，不执行末尾冗余绘制
+      dragState.active = false; dragState.dir = null; dragState.locked = false;
+      animating = true;
+      (async function() {
+        var chainRound = 0;
+        var safetyRounds = 0;
+        while (matches.length > 0 || safetyRounds < 3) {
+          if (matches.length === 0) {
+            // 安全二次验证：确保没有漏检的匹配
+            safetyRounds++;
+            console.log('[chain] safety check #'+safetyRounds+', calling findMatches...');
+            matches = findMatches();
+            if (matches.length === 0) { console.log('[chain] safety confirmed, no matches'); break; }
+            console.warn('[chain] FOUND LEAKED matches='+matches.length, matches.map(function(m){return '('+m.r+','+m.c+')'+grid[m.r][m.c];}).join(' '));
+          }
+          chainRound++;
+          console.log('[chain] round '+chainRound+' start, matches='+matches.length);
+          var maxLen = processMatches(matches); sfxMatch(maxLen);
+          await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
+          var prevCount = matches.length;
+          matches = findMatches();
+          console.log('[chain] round '+chainRound+' done, prevMatches='+prevCount+' newMatches='+matches.length);
+        }
+        console.log('[chain] all rounds complete, safetyRounds='+safetyRounds);
+        // 最终重绘确保棋盘状态一致
+        drawBoard();
+        if (checkWin()) { endGame(true); return; }
+        if (!hasValidMoves()) {
+          if (reshufflesLeft > 0) { showReshuffleModal(); }
+          else { endGame(false); }
+          return;
+        }
+        animating = false; updateUI();
+      })();
+    } else {
+      // 无消除，还原
+      slidePiece(tr, tc, sr, sc);
+      sfxFail();
+      animating = false;
+      // 检查是否卡死：无消除且无合法移动 → 触发重排或结束
+      if (!hasValidMoves()) {
+        if (reshufflesLeft > 0) {
+          showReshuffleModal();
+        } else {
+          endGame(false);
+        }
+        handledByDrag = true; // 跳过末尾绘制（弹窗已接管）
+      }
+    }
+  } else {
+    // 点击（没拖够阈值）：处理选中逻辑
+    if (grid[sr][sc] === -1) { /* skip */ }
+    else {
+      if (selected && selected.row === sr && selected.col === sc) {
+        selected = null; // 再次点击取消选中
+      } else if (selected) {
+        var dr = Math.abs(selected.row - sr), dc = Math.abs(selected.col - sc);
+        if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+          var pr = selected.row, pc = selected.col;
+          selected = null; dragState.active = false; drawBoard();
+          playTurn(pr, pc, sr, sc); return;
+        } else {
+          selected = { row: sr, col: sc };
+        }
+      } else {
+        selected = { row: sr, col: sc };
+      }
+    }
+  }
+
+  // 仅当不是拖拽+消除路径时才执行末尾绘制（避免和异步动画冲突）
+  if (!handledByDrag) {
+    dragState.active = false; dragState.dir = null; dragState.locked = false;
+    drawBoard(); updateUI();
+  }
+}
+
+// --- 鼠标事件 ---
+canvas.addEventListener('mousedown', function(e) {
+  console.log('[mousedown] animating='+animating+' gameOver='+gameOver);
+  if (animating || gameOver) {
+    // 如果 gameOver 意外卡住, 强制恢复
+    if (gameOver && !animating && !document.getElementById('stage-curtain').classList.contains('active')) {
+      console.warn('[fix] gameOver stuck, force reset');
+      gameOver = false; animating = false;
+    } else { return; }
+  }
+  if (document.getElementById('reshuffle-modal').classList.contains('show')) return;
+  if (document.getElementById('overlay').classList.contains('show')) return;
+  initAudio();
+  handlePointerDown(getCellFromEvent(e));
+});
+
+canvas.addEventListener('mousemove', function(e) {
+  handlePointerMove(e);
+});
+
+canvas.addEventListener('mouseup', handlePointerUp);
+canvas.addEventListener('mouseleave', handlePointerUp);
+
+// --- 触摸事件 ---
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  if (animating || gameOver) return;
+  if (document.getElementById('reshuffle-modal').classList.contains('show')) return;
+  if (document.getElementById('overlay').classList.contains('show')) return;
+  initAudio();
+  handlePointerDown(getCellFromEvent(e, 0));
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  handlePointerMove(e, 0);
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(e) {
+  e.preventDefault();
+  handlePointerUp();
+}, { passive: false });
+
+// polyfill roundRect
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r2){
+    this.beginPath();
+    this.moveTo(x+r2,y);this.lineTo(x+w-r2,y);this.arcTo(x+w,y,x+w,y+r2,r2);this.lineTo(x+w,y+h-r2);
+    this.arcTo(x+w,y+h,x+w-r2,y+h,r2);this.lineTo(x+r2,y+h);this.arcTo(x,y+h,x,y+h-r2,r2);this.lineTo(x,y+r2);
+    this.arcTo(x,y,x+r2,y,r2);this.closePath();return this;
+  };
+}
+
+// ======================== 启动 ========================
+drawSkillIcons();
+(function() {
+  // 恢复进度
+  currentLevel = loadProgress();
+  var lv = getLevelConfig();
+  score=0; masksTotal=lv.masksTarget; masksEliminated=0; masksSpawned=64;
+  energy=0; reshufflesLeft=2; reshuffleUsed=0;
+  selected=null; selectedSkill=null; gameOver=true; animating=false;
+  createGrid(); drawBoard(); updateUI();
+  if (currentLevel === 0) {
+    showMessage('点击棋盘，不限步数，消到每种脸谱≤2个即可通关');
+  } else {
+    showMessage('欢迎回来！当前第' + lv.level + '关：' + lv.title);
+  }
+  var curtainStarted = false;
+  var firstClickHandler = function() {
+    if (curtainStarted) return;
+    curtainStarted = true;
+    canvas.removeEventListener('mousedown', firstClickHandler);
+    hideMessage();
+    initAudio();
+
+    // 非第1关：恢复进度，跳过开幕动画直接开始
+    if (currentLevel > 0) {
+      gameOver = false; animating = false;
+      drawBoard();
+      showMessage('第' + lv.level + '关：' + lv.title);
+      return;
+    }
+
+    // 第1关：播开幕动画
+    try {
+      console.log('[firstClick] starting curtain');
+      gameOver = true; animating = true;
+      var curtainPromise = playOpeningCurtain(0);
+      if (!curtainPromise || !curtainPromise.then) {
+        console.warn('[firstClick] curtain promise invalid, skip');
+        gameOver = false; animating = false;
+        drawBoard();
+        showMessage('第1关：' + lv.title + '　不限步数，消到每种脸谱≤2个');
+        return;
+      }
+      curtainPromise.then(function() {
+        console.log('[firstClick] curtain done');
+        gameOver = false; animating = false;
+        drawBoard();
+        showMessage('第1关：' + lv.title + '　不限步数，消到每种脸谱≤2个');
+      }).catch(function(err) {
+        console.error('[firstClick] curtain error:', err);
+        gameOver = false; animating = false;
+        drawBoard();
+        showMessage('第1关：' + lv.title + '　不限步数，消到每种脸谱≤2个');
+      });
+    } catch(e) {
+      console.error('[firstClick] exception:', e);
+      gameOver = false; animating = false;
+      drawBoard();
+      showMessage('第1关：' + lv.title + '　不限步数，消到每种脸谱≤2个');
+    }
+  };
+  canvas.addEventListener('mousedown', firstClickHandler);
+
+  // 安全阀：5秒后如果还没点击，强制开始（跳过动画）
+  setTimeout(function() {
+    if (gameOver && !curtainStarted) {
+      console.log('[auto] no click detected, skip curtain');
+      curtainStarted = true;
+      try { canvas.removeEventListener('mousedown', firstClickHandler); } catch(e) {}
+      hideMessage();
+      gameOver = false; animating = false;
+      initAudio(); drawBoard();
+      showMessage((currentLevel === 0 ? '第1关：' : '第' + lv.level + '关：') + lv.title);
+    }
+    if (gameOver && !document.getElementById('stage-curtain').classList.contains('active')) {
+      console.warn('[auto] gameOver stuck, force reset');
+      gameOver = false; animating = false;
+      drawBoard();
+    }
+  }, 5000);
+})();
+</script>
+</body>
+</html>
