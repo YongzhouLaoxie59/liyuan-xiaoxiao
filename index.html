@@ -332,7 +332,7 @@ body {
     </div>
     <div id="title-area">
       <h1>梨园消消</h1>
-      <div class="subtitle">京剧三消</div>
+      <div class="subtitle">京剧三消 · v60606</div>
     </div>
     <div id="score-box">
       <div class="label">步 数</div>
@@ -2148,8 +2148,9 @@ async function playTurn(r1,c1,r2,c2) {
   initAudio();
   swap(r1,c1,r2,c2);
   var matches=findMatches();
-  if(matches.length===0){swap(r1,c1,r2,c2);sfxFail();return;}
+  if(matches.length===0){swap(r1,c1,r2,c2);sfxFail();showMessage('[点] ('+r1+','+c1+')<->('+r2+','+c2+') 无匹配!');return;}
   stepCount++;
+  showMessage('[点] 匹配='+matches.length+' 消除中...');
   animating=true; selected=null; _animatingSince=Date.now(); updateUI();
   try {
     await animateSwap(r1,c1,r2,c2);
@@ -2726,8 +2727,10 @@ function handlePointerUp() {
     initAudio();
     // 滑动后检查是否有消除
     var matches = findMatches();
+    var dbgInfo = '[拖] ('+sr+','+sc+')->('+tr+','+tc+') 匹配='+matches.length;
     console.log('[drag] slide ('+sr+','+sc+')->('+tr+','+tc+'), matches='+matches.length,
       matches.map(function(m){return '('+m.r+','+m.c+')'+grid[m.r][m.c];}).join(' '));
+    showMessage(dbgInfo);
     if (matches.length > 0) {
       stepCount++; updateUI(); // 拖拽滑动算一步
       handledByDrag = true; // 异步路径接管，不执行末尾冗余绘制
@@ -2765,6 +2768,7 @@ function handlePointerUp() {
       // 无消除，还原
       slidePiece(tr, tc, sr, sc);
       sfxFail();
+      showMessage('[拖] 无匹配! 已还原');
       animating = false; _animatingSince = 0;
       // 检查是否卡死：无消除且无合法移动 → 触发重排或结束
       if (!hasValidMoves()) {
