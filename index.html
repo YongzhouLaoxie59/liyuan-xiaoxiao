@@ -2154,16 +2154,24 @@ async function playTurn(r1,c1,r2,c2) {
   animating=true; selected=null; _animatingSince=Date.now(); updateUI();
   try {
     await animateSwap(r1,c1,r2,c2);
+    console.log('[chain] after animateSwap, matches='+matches.length);
     var safetyRounds=0;
     while(matches.length>0||safetyRounds<3) {
       if(matches.length===0){
         safetyRounds++;
         matches=findMatches();
+        console.log('[chain] safetyRound='+safetyRounds+' recheck matches='+matches.length);
         if(matches.length===0) break;
       }
+      console.log('[chain] ROUND start, matches='+matches.length);
       var maxLen=processMatches(matches); sfxMatch(maxLen);
-      await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
+      console.log('[chain] after processMatches, maxLen='+maxLen);
+      await animateClear(); console.log('[chain] after animateClear');
+      refillEmptyCells(); console.log('[chain] after refillEmptyCells');
+      await animateDrop(); console.log('[chain] after animateDrop');
+      drawBoard(); await sleep(180);
       matches=findMatches();
+      console.log('[chain] after findMatches, new matches='+matches.length);
     }
     drawBoard();
     if(checkWin()) { endGame(true); return; }
@@ -2178,6 +2186,7 @@ async function playTurn(r1,c1,r2,c2) {
     showMessage('消除出错，已自动恢复');
     animating=false; drawBoard(); updateUI();
   }
+  console.log('[playTurn] EXIT, animating='+animating);
 }
 
 // ======================== 重排逻辑 ========================
@@ -2743,16 +2752,24 @@ function handlePointerUp() {
         try {
           var chainRound = 0;
           var safetyRounds = 0;
+          console.log('[drag-chain] START, matches='+matches.length);
           while (matches.length > 0 || safetyRounds < 3) {
             if (matches.length === 0) {
               safetyRounds++;
               matches = findMatches();
-              if (matches.length === 0) { break; }
+              console.log('[drag-chain] safetyRound='+safetyRounds+' recheck matches='+matches.length);
+              if (matches.length === 0) { console.log('[drag-chain] safetyExit'); break; }
             }
             chainRound++;
+            console.log('[drag-chain] ROUND #'+chainRound+' matches='+matches.length);
             var maxLen = processMatches(matches); sfxMatch(maxLen);
-            await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
+            console.log('[drag-chain] after processMatches maxLen='+maxLen);
+            await animateClear(); console.log('[drag-chain] after animateClear');
+            refillEmptyCells(); console.log('[drag-chain] after refillEmptyCells');
+            await animateDrop(); console.log('[drag-chain] after animateDrop');
+            drawBoard(); await sleep(180);
             matches = findMatches();
+            console.log('[drag-chain] after findMatches new matches='+matches.length);
           }
           drawBoard();
           if (checkWin()) { endGame(true); return; }
