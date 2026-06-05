@@ -2409,7 +2409,24 @@ async function animateSwap(r1,c1,r2,c2) {
   }
   } catch(e) { console.error('[animateSwap] draw error (non-fatal):', e); }
 }
-async function animateClear(){console.log('[animateClear] ENTER');for(var t=0;t<4;t++){drawBoard(t%2===0?'rgba(255,255,255,0.2)':null);await sleep(40);} console.log('[animateClear] DONE');}
+async function animateClear(){
+  console.log('[animateClear] ENTER');
+  for(var t=0;t<4;t++){
+    drawBoard();
+    // 在画面上直接显示消除中
+    ctx.save();
+    ctx.fillStyle='rgba(255,255,100,0.3)';
+    ctx.fillRect(0,0,canvas.width,40);
+    ctx.fillStyle='#FFD700';
+    ctx.font='bold 16px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('消除中...', canvas.width/2, 28);
+    ctx.restore();
+    await sleep(40);
+  }
+  drawBoard();
+  console.log('[animateClear] DONE');
+}
 async function animateDrop(){console.log('[animateDrop] ENTER');drawBoard();await sleep(100); console.log('[animateDrop] DONE');}
 
 function drawBoard(flash) {
