@@ -2175,6 +2175,7 @@ async function playTurn(r1,c1,r2,c2) {
     animating=false; updateUI();
   } catch(err) {
     console.error('[playTurn] FATAL error:', err);
+    showMessage('消除出错，已自动恢复');
     animating=false; drawBoard(); updateUI();
   }
 }
@@ -2389,6 +2390,7 @@ function useSkill(skill,row,col) {
 async function animateSwap(r1,c1,r2,c2) {
   var x1=c1*CELL+CELL/2,y1=r1*CELL+CELL/2,x2=c2*CELL+CELL/2,y2=r2*CELL+CELL/2;
   var t1=grid[r2][c2],t2=grid[r1][c1];
+  try {
   for(var t=0;t<=8;t++){
     drawBoard();
     var prog=t/8;
@@ -2396,6 +2398,7 @@ async function animateSwap(r1,c1,r2,c2) {
     drawFaceMask(ctx,x2+(x1-x2)*prog,y2+(y1-y2)*prog,CELL*0.38,ROLES[t2],false,t2);
     await sleep(16);
   }
+  } catch(e) { console.error('[animateSwap] draw error (non-fatal):', e); }
 }
 async function animateClear(){console.log('[animateClear] ENTER');for(var t=0;t<4;t++){drawBoard(t%2===0?'rgba(255,255,255,0.2)':null);await sleep(40);} console.log('[animateClear] DONE');}
 async function animateDrop(){console.log('[animateDrop] ENTER');drawBoard();await sleep(100); console.log('[animateDrop] DONE');}
@@ -2687,7 +2690,7 @@ function handlePointerMove(e, touchIdx) {
   var cell = getCellFromEvent(e, touchIdx);
   var dx = cell.x - (dragState.startCol * CELL + CELL / 2);
   var dy = cell.y - (dragState.startRow * CELL + CELL / 2);
-  var threshold = CELL * 0.32;
+  var threshold = CELL * 0.15;
 
   // 方向锁定：第一次超过阈值时锁定水平/垂直方向
   if (!dragState.locked) {
