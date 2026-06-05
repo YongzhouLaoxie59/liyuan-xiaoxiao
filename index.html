@@ -382,7 +382,7 @@ body {
   <div id="bottom-area">
     <button class="ctrl-btn" onclick="resetLevel()">重新开局</button>
     <button class="ctrl-btn" onclick="cancelSkill()">取消技能</button>
-    <button class="ctrl-btn reshuffle-btn" id="manual-reshuffle-btn" onclick="manualReshuffle()">重排棋盘</button>
+    <button class="ctrl-btn" onclick="showLevelSelect()">选 关</button>
   </div>
 
   <!-- 主界面语言选择 -->
@@ -408,9 +408,17 @@ body {
   <div id="reshuffle-modal">
     <h3 id="reshuffle-title">棋盘无路可走！</h3>
     <p id="reshuffle-desc">剩余脸谱：0 个</p>
-    <button class="free-btn" id="reshuffle-free-btn" onclick="doReshuffle(false)">免费重排</button>
-    <button class="ad-btn" id="reshuffle-ad-btn" onclick="doReshuffle(true)" style="display:none">📺 看广告重排</button>
+    <button class="ad-btn" id="reshuffle-ad-btn" onclick="doReshuffle(true)">📺 看广告重排</button>
+    <p style="font-size:11px;color:#888;margin-top:-4px;">【内测版】广告将模拟播放3秒</p>
     <button class="skip-btn" onclick="closeReshuffleModal()">不重排，结束此关</button>
+  </div>
+
+  <!-- 选关弹窗 -->
+  <div id="level-select-modal" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:66;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
+    <h3 style="font-size:18px;color:#FFD700;letter-spacing:2px;margin-bottom:4px;">🎭 选择关卡</h3>
+    <p style="font-size:12px;color:#c8a860;margin-bottom:8px;">可回到任意已解锁关卡</p>
+    <div id="level-select-grid" style="display:grid;grid-template-columns:repeat(5,52px);gap:8px;"></div>
+    <button onclick="closeLevelSelect()" style="margin-top:14px;padding:8px 28px;font-size:13px;font-family:inherit;background:transparent;border:1px solid #666;border-radius:16px;color:#888;cursor:pointer;">取 消</button>
   </div>
 
   <!-- 开场大幕 -->
@@ -1813,11 +1821,13 @@ function closeKcAndHome() {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const COLS=8, ROWS=8;
+console.log('%c梨园消消 DEBUG v2026.06.06.001', 'color:#FFD700;font-size:14px;font-weight:bold;');
+console.log('[init] canvas.size='+canvas.width+'x'+canvas.height+' CELL='+(canvas.width/COLS));
 const CELL = canvas.width / COLS;
 let grid=[], selected=null, selectedSkill=null;
 let score=0, energy=0, stepCount=0;
 let masksEliminated=0, masksTotal=64, masksSpawned=64;
-let reshufflesLeft=2, reshuffleUsed=0; // 每关2次，0=未用免费，1=已用免费（下次需广告），2=用完
+let reshufflesLeft=1, reshuffleUsed=0; // 每关1次广告重排机会
 let animating=false, gameOver=false;
 
 let roleImages = {};
@@ -2108,6 +2118,7 @@ function refillEmptyCells() {
 }
 
 function processMatches(matches) {
+  console.log('[processMatches] ENTER: '+matches.length+' matches');
   var maxLen=0;
   var byType={};
   matches.forEach(function(m){
@@ -2138,60 +2149,54 @@ async function playTurn(r1,c1,r2,c2) {
   swap(r1,c1,r2,c2);
   var matches=findMatches();
   if(matches.length===0){swap(r1,c1,r2,c2);sfxFail();return;}
-  stepCount++; // 有效交换，步数+1
-  animating=true; selected=null; updateUI();
-  await animateSwap(r1,c1,r2,c2);
-  var safetyRounds=0;
-  while(matches.length>0||safetyRounds<3) {
-    if(matches.length===0){
-      safetyRounds++;
-      console.log('[playTurn] safety check #'+safetyRounds);
+  stepCount++;
+  animating=true; selected=null; _animatingSince=Date.now(); updateUI();
+  try {
+    await animateSwap(r1,c1,r2,c2);
+    var safetyRounds=0;
+    while(matches.length>0||safetyRounds<3) {
+      if(matches.length===0){
+        safetyRounds++;
+        matches=findMatches();
+        if(matches.length===0) break;
+      }
+      var maxLen=processMatches(matches); sfxMatch(maxLen);
+      await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
       matches=findMatches();
-      if(matches.length===0){console.log('[playTurn] safety confirmed');break;}
-      console.warn('[playTurn] FOUND LEAKED matches='+matches.length);
     }
-    var maxLen=processMatches(matches); sfxMatch(maxLen);
-    await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
-    matches=findMatches();
-  }
-  drawBoard();
-  // 检查通关
-  if(checkWin()) { endGame(true); return; }
-  // 检查是否卡死（无路可走）
-  if(!hasValidMoves()) {
-    if(reshufflesLeft > 0) {
-      showReshuffleModal();
-    } else {
-      endGame(false);
+    drawBoard();
+    if(checkWin()) { endGame(true); return; }
+    if(!hasValidMoves()) {
+      if(reshufflesLeft > 0) { showReshuffleModal(); }
+      else { endGame(false); }
+      return;
     }
-    return;
+    animating=false; updateUI();
+  } catch(err) {
+    console.error('[playTurn] FATAL error:', err);
+    animating=false; drawBoard(); updateUI();
   }
-  animating=false; updateUI();
 }
 
 // ======================== 重排逻辑 ========================
-function showReshuffleModal() {
-  animating = true;
+function showReshuffleModal(customTitle) {
+  animating = true; _animatingSince = Date.now();
   var remaining = countRemaining();
-  document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
+  document.getElementById('reshuffle-title').textContent = customTitle || t('reshuffleTitle');
   document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
-  var freeBtn = document.getElementById('reshuffle-free-btn');
   var adBtn = document.getElementById('reshuffle-ad-btn');
-  if (reshufflesLeft >= 2) {
-    freeBtn.style.display = 'inline-block';
-    freeBtn.textContent = '🎲 '+t('reshuffleFree')+'（剩2次）';
-    adBtn.style.display = 'none';
-  } else if (reshufflesLeft === 1) {
-    freeBtn.style.display = 'none';
+  if (reshufflesLeft > 0) {
     adBtn.style.display = 'inline-block';
-    adBtn.textContent = t('reshuffleAd')+'（最后1次）';
+    adBtn.textContent = '📺 看广告重排（剩'+reshufflesLeft+'次）';
+  } else {
+    adBtn.style.display = 'none';
   }
   document.getElementById('reshuffle-modal').classList.add('show');
 }
 
 function closeReshuffleModal() {
   document.getElementById('reshuffle-modal').classList.remove('show');
-  animating = false;
+  animating = false; _animatingSince = 0;
   endGame(false);
 }
 
@@ -2230,7 +2235,7 @@ function executeReshuffle() {
   var afterShuffleMatches = findMatches();
   if (afterShuffleMatches.length > 0) {
     console.log('[reshuffle] found ' + afterShuffleMatches.length + ' matches, auto-clearing...');
-    animating = true;
+    animating = true; _animatingSince = Date.now();
     (async function() {
       var safetyRounds = 0;
       var matches = afterShuffleMatches;
@@ -2251,23 +2256,61 @@ function executeReshuffle() {
         else { endGame(false); }
         return;
       }
-      animating = false; updateUI();
+      animating = false; _animatingSince = 0; updateUI();
     })();
   } else {
-    animating = false;
+    animating = false; _animatingSince = 0;
     updateUI();
   }
 }
 
+// ======================== 选关功能 ========================
+function showLevelSelect() {
+  if (animating) return;
+  var maxLevel = loadProgress(); // 最高已解锁关卡索引
+  var grid = document.getElementById('level-select-grid');
+  grid.innerHTML = '';
+  LEVELS.forEach(function(lv, idx) {
+    var btn = document.createElement('button');
+    btn.textContent = lv.level;
+    var unlocked = idx <= maxLevel;
+    btn.style.cssText = 'width:52px;height:52px;font-size:14px;font-family:inherit;border-radius:8px;cursor:'+(unlocked?'pointer':'default')+';'
+      + (idx === currentLevel
+        ? 'background:linear-gradient(180deg,#FFD700,#cc9900);border:2px solid #fff;color:#000;font-weight:bold;'
+        : unlocked
+          ? 'background:linear-gradient(180deg,#5a2010,#3a1008);border:2px solid #8B6914;color:#FFD700;'
+          : 'background:#1a0a0a;border:1px solid #333;color:#444;');
+    if (unlocked) {
+      btn.onclick = function() { jumpToLevel(idx); };
+    }
+    // 小标题
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;';
+    var label = document.createElement('div');
+    label.textContent = lv.title;
+    label.style.cssText = 'font-size:9px;color:'+(unlocked?'#c8a860':'#333')+';text-align:center;width:52px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;';
+    wrap.appendChild(btn);
+    wrap.appendChild(label);
+    grid.appendChild(wrap);
+  });
+  var modal = document.getElementById('level-select-modal');
+  modal.style.display = 'flex';
+}
+
+function closeLevelSelect() {
+  document.getElementById('level-select-modal').style.display = 'none';
+}
+
+function jumpToLevel(idx) {
+  closeLevelSelect();
+  currentLevel = idx;
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('reshuffle-modal').classList.remove('show');
+  startLevel(true);
+}
+
 function manualReshuffle() {
-  if (animating || gameOver) return;
-  if (reshufflesLeft <= 0) {
-    showMessage('重排次数已用完！');
-    sfxFail();
-    return;
-  }
-  // 统一走弹窗流程，确保玩家看到确认界面
-  showReshuffleModal();
+  // 保留空函数兼容旧引用，底部按钮已改为"选关"
 }
 
 function shuffleBoard() {
@@ -2353,8 +2396,8 @@ async function animateSwap(r1,c1,r2,c2) {
     await sleep(16);
   }
 }
-async function animateClear(){for(var t=0;t<4;t++){drawBoard(t%2===0?'rgba(255,255,255,0.2)':null);await sleep(40);}}
-async function animateDrop(){drawBoard();await sleep(100);}
+async function animateClear(){console.log('[animateClear] ENTER');for(var t=0;t<4;t++){drawBoard(t%2===0?'rgba(255,255,255,0.2)':null);await sleep(40);} console.log('[animateClear] DONE');}
+async function animateDrop(){console.log('[animateDrop] ENTER');drawBoard();await sleep(100); console.log('[animateDrop] DONE');}
 
 function drawBoard(flash) {
   try {
@@ -2559,7 +2602,7 @@ async function startLevel(skipCurtain) {
   var lv=getLevelConfig();
   score=0; stepCount=0; masksTotal=lv.masksTarget; masksEliminated=0; masksSpawned=64;
   energy=0;
-  reshufflesLeft=2; reshuffleUsed=0;
+  reshufflesLeft=1; reshuffleUsed=0;
   selected=null; selectedSkill=null; gameOver=false; animating=true;
   cancelSkill(); createGrid(); updateUI();
   document.getElementById('toast').className='';
@@ -2621,6 +2664,7 @@ function slidePiece(r1, c1, r2, c2) {
 function handlePointerDown(cell) {
   if (cell.row < 0 || cell.row >= ROWS || cell.col < 0 || cell.col >= COLS) return;
   if (grid[cell.row][cell.col] === -1) return; // 空格子不响应
+  console.log('[PTR-DOWN] start=('+cell.row+','+cell.col+') type='+grid[cell.row][cell.col]+' skill='+selectedSkill);
 
   // 技能模式
   if (selectedSkill) {
@@ -2648,8 +2692,10 @@ function handlePointerMove(e, touchIdx) {
   if (!dragState.locked) {
     if (Math.abs(dx) > threshold && Math.abs(dx) >= Math.abs(dy)) {
       dragState.dir = 'h'; dragState.locked = true; dragMovedEnough = true;
+      console.log('[PTR-MOVE] LOCKED h: dx='+dx.toFixed(1)+' thresh='+threshold.toFixed(1)+' start=('+dragState.startRow+','+dragState.startCol+') curCell=('+cell.row+','+cell.col+')');
     } else if (Math.abs(dy) > threshold) {
       dragState.dir = 'v'; dragState.locked = true; dragMovedEnough = true;
+      console.log('[PTR-MOVE] LOCKED v: dy='+dy.toFixed(1)+' thresh='+threshold.toFixed(1)+' start=('+dragState.startRow+','+dragState.startCol+') curCell=('+cell.row+','+cell.col+')');
     } else {
       return; // 还没拖到阈值，不更新
     }
@@ -2668,6 +2714,7 @@ function handlePointerMove(e, touchIdx) {
 
 function handlePointerUp() {
   if (!dragState.active) return;
+  console.log('[PTR-UP] active dragState: start=('+dragState.startRow+','+dragState.startCol+') cur=('+dragState.curRow+','+dragState.curCol+') movedEnough='+dragMovedEnough+' animating='+animating);
 
   var sr = dragState.startRow, sc = dragState.startCol;
   var tr = dragState.curRow, tc = dragState.curCol;
@@ -2685,43 +2732,40 @@ function handlePointerUp() {
       stepCount++; updateUI(); // 拖拽滑动算一步
       handledByDrag = true; // 异步路径接管，不执行末尾冗余绘制
       dragState.active = false; dragState.dir = null; dragState.locked = false;
-      animating = true;
+      animating = true; _animatingSince = Date.now();
       (async function() {
-        var chainRound = 0;
-        var safetyRounds = 0;
-        while (matches.length > 0 || safetyRounds < 3) {
-          if (matches.length === 0) {
-            // 安全二次验证：确保没有漏检的匹配
-            safetyRounds++;
-            console.log('[chain] safety check #'+safetyRounds+', calling findMatches...');
+        try {
+          var chainRound = 0;
+          var safetyRounds = 0;
+          while (matches.length > 0 || safetyRounds < 3) {
+            if (matches.length === 0) {
+              safetyRounds++;
+              matches = findMatches();
+              if (matches.length === 0) { break; }
+            }
+            chainRound++;
+            var maxLen = processMatches(matches); sfxMatch(maxLen);
+            await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
             matches = findMatches();
-            if (matches.length === 0) { console.log('[chain] safety confirmed, no matches'); break; }
-            console.warn('[chain] FOUND LEAKED matches='+matches.length, matches.map(function(m){return '('+m.r+','+m.c+')'+grid[m.r][m.c];}).join(' '));
           }
-          chainRound++;
-          console.log('[chain] round '+chainRound+' start, matches='+matches.length);
-          var maxLen = processMatches(matches); sfxMatch(maxLen);
-          await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
-          var prevCount = matches.length;
-          matches = findMatches();
-          console.log('[chain] round '+chainRound+' done, prevMatches='+prevCount+' newMatches='+matches.length);
+          drawBoard();
+          if (checkWin()) { endGame(true); return; }
+          if (!hasValidMoves()) {
+            if (reshufflesLeft > 0) { showReshuffleModal(); }
+            else { endGame(false); }
+            return;
+          }
+          animating = false; _animatingSince = 0; updateUI();
+        } catch(err) {
+          console.error('[chain] FATAL error:', err);
+          animating = false; _animatingSince = 0; drawBoard(); updateUI();
         }
-        console.log('[chain] all rounds complete, safetyRounds='+safetyRounds);
-        // 最终重绘确保棋盘状态一致
-        drawBoard();
-        if (checkWin()) { endGame(true); return; }
-        if (!hasValidMoves()) {
-          if (reshufflesLeft > 0) { showReshuffleModal(); }
-          else { endGame(false); }
-          return;
-        }
-        animating = false; updateUI();
       })();
     } else {
       // 无消除，还原
       slidePiece(tr, tc, sr, sc);
       sfxFail();
-      animating = false;
+      animating = false; _animatingSince = 0;
       // 检查是否卡死：无消除且无合法移动 → 触发重排或结束
       if (!hasValidMoves()) {
         if (reshufflesLeft > 0) {
@@ -2761,13 +2805,19 @@ function handlePointerUp() {
 }
 
 // --- 鼠标事件 ---
+var _animatingSince = 0; // 时间戳：animating 从何时开始
 canvas.addEventListener('mousedown', function(e) {
   console.log('[mousedown] animating='+animating+' gameOver='+gameOver);
   if (animating || gameOver) {
+    // 自愈：animating 超过10秒未恢复，强制重置
+    if (animating && _animatingSince > 0 && Date.now() - _animatingSince > 10000) {
+      console.warn('[fix] animating stuck >10s, force reset');
+      animating = false; _animatingSince = 0; _animatingSince = 0; drawBoard(); updateUI();
+    }
     // 如果 gameOver 意外卡住, 强制恢复
     if (gameOver && !animating && !document.getElementById('stage-curtain').classList.contains('active')) {
       console.warn('[fix] gameOver stuck, force reset');
-      gameOver = false; animating = false;
+      gameOver = false; animating = false; _animatingSince = 0;
     } else { return; }
   }
   if (document.getElementById('reshuffle-modal').classList.contains('show')) return;
@@ -2820,7 +2870,7 @@ drawSkillIcons();
   currentLevel = loadProgress();
   var lv = getLevelConfig();
   score=0; masksTotal=lv.masksTarget; masksEliminated=0; masksSpawned=64;
-  energy=0; reshufflesLeft=2; reshuffleUsed=0;
+  energy=0; reshufflesLeft=1; reshuffleUsed=0;
   selected=null; selectedSkill=null; gameOver=true; animating=false;
   createGrid(); drawBoard(); updateUI();
   if (currentLevel === 0) {
@@ -2838,7 +2888,7 @@ drawSkillIcons();
 
     // 非第1关：恢复进度，跳过开幕动画直接开始
     if (currentLevel > 0) {
-      gameOver = false; animating = false;
+      gameOver = false; animating = false; _animatingSince = 0;
       drawBoard();
       showMessage('第' + lv.level + '关：' + lv.title);
       return;
@@ -2851,25 +2901,25 @@ drawSkillIcons();
       var curtainPromise = playOpeningCurtain(0);
       if (!curtainPromise || !curtainPromise.then) {
         console.warn('[firstClick] curtain promise invalid, skip');
-        gameOver = false; animating = false;
+        gameOver = false; animating = false; _animatingSince = 0;
         drawBoard();
         showMessage('第1关：' + lv.title + '　不限步数，消到每种脸谱≤2个');
         return;
       }
       curtainPromise.then(function() {
         console.log('[firstClick] curtain done');
-        gameOver = false; animating = false;
+        gameOver = false; animating = false; _animatingSince = 0;
         drawBoard();
         showMessage('第1关：' + lv.title + '　不限步数，消到每种脸谱≤2个');
       }).catch(function(err) {
         console.error('[firstClick] curtain error:', err);
-        gameOver = false; animating = false;
+        gameOver = false; animating = false; _animatingSince = 0;
         drawBoard();
         showMessage('第1关：' + lv.title + '　不限步数，消到每种脸谱≤2个');
       });
     } catch(e) {
       console.error('[firstClick] exception:', e);
-      gameOver = false; animating = false;
+      gameOver = false; animating = false; _animatingSince = 0;
       drawBoard();
       showMessage('第1关：' + lv.title + '　不限步数，消到每种脸谱≤2个');
     }
@@ -2883,13 +2933,13 @@ drawSkillIcons();
       curtainStarted = true;
       try { canvas.removeEventListener('mousedown', firstClickHandler); } catch(e) {}
       hideMessage();
-      gameOver = false; animating = false;
+      gameOver = false; animating = false; _animatingSince = 0;
       initAudio(); drawBoard();
       showMessage((currentLevel === 0 ? '第1关：' : '第' + lv.level + '关：') + lv.title);
     }
     if (gameOver && !document.getElementById('stage-curtain').classList.contains('active')) {
       console.warn('[auto] gameOver stuck, force reset');
-      gameOver = false; animating = false;
+      gameOver = false; animating = false; _animatingSince = 0;
       drawBoard();
     }
   }, 5000);
