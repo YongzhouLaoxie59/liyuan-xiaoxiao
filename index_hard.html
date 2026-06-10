@@ -2018,8 +2018,7 @@ function countByType() {
 }
 
 // 通关条件：每种脸谱剩余数量 <= 2（即不存在某种脸谱剩余 >= 3 个），第2关起还需所有脸谱已落入棋盘
-function checkWin() {  // 冻结格存在时，不判定通关（需要先解冻所有格子）
-  if (countFrozen() > 0) return false;
+function checkWin() {
   var lv = getLevelConfig();
   // 第2关起：必须等所有脸谱都落下后才能判定胜利
   if (currentLevel > 0 && masksSpawned < lv.masksTarget) return false;
@@ -2036,7 +2035,7 @@ function hasValidMoves() {
   // 只检测相邻交换（上下左右），和用户实际拖拽/点击操作一致
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
-      if (grid[r][c] === -1 || frozen[r][c] > 0) continue;
+      if (grid[r][c] === -1) continue;
       // 向右相邻交换
       if (c + 1 < COLS) {
         swap(r, c, r, c + 1);
@@ -2055,7 +2054,6 @@ function hasValidMoves() {
 }
 
 function swap(r1,c1,r2,c2){
-  // 冻结格检查：涉及冻结格的交换不允许
   if (frozen[r1][c1] > 0 || frozen[r2][c2] > 0) return;
   var t=grid[r1][c1];grid[r1][c1]=grid[r2][c2];grid[r2][c2]=t;
 }
@@ -2173,14 +2171,8 @@ function processMatches(matches) {
   });
   // 累计脸谱消除数
   masksEliminated += matches.length;
-  var eliminatedPositions = [];
-  matches.forEach(function(m){grid[m.r][m.c]=-1; eliminatedPositions.push({r:m.r,c:m.c});});
+  matches.forEach(function(m){grid[m.r][m.c]=-1; thawAdjacent(m.r, m.c);});
   updateUI();
-  // 冻结格解冻检查
-  if (typeof eliminatedPositions !== 'undefined' && eliminatedPositions.length > 0) {
-    thawAdjacent(eliminatedPositions);
-    drawBoard();
-  }
   return maxLen;
 }
 
@@ -2465,10 +2457,9 @@ function drawBoard(flash) {
       ctx.beginPath(); ctx.rect(dragSrcC * CELL + 2, dragSrcR * CELL + 2, CELL - 4, CELL - 4); ctx.stroke();
       ctx.shadowBlur = 0; ctx.restore();
     }
-    // 绘制冻结格覆盖层
-    drawFrozenOverlay();
     if (flash) { ctx.fillStyle = flash; ctx.fillRect(0, 0, canvas.width, canvas.height); }
   } catch (e) { console.error('drawBoard error:', e); }
+  drawFrozenOverlay();
 }
 
 // ======================== UI ========================
@@ -2656,10 +2647,6 @@ function handlePointerDown(cell) {
   }
 
   // 开始拖拽追踪（保留 selected 状态，由 mouseup 统一处理）
-  // 冻结格检查：选中的格子如果是冻结的，不允许操作
-  if (dragState.startRow >= 0 && dragState.startCol >= 0 && frozen[dragState.startRow] && frozen[dragState.startRow][dragState.startCol] > 0) {
-    return; // 冻结格，直接返回
-  }
   dragState.active = true;
   dragState.startRow = cell.row; dragState.startCol = cell.col;
   dragState.curRow = cell.row; dragState.curCol = cell.col;
@@ -2955,95 +2942,66 @@ drawSkillIcons();
 
 // ======================== 冻结格机制 ========================
 function initFrozen() {
-  // 根据关卡等级初始化冻结格
-  // 第5关开始有冻结格，数量随关卡递增
   frozen = [];
   for (var r = 0; r < ROWS; r++) {
     frozen[r] = [];
-    for (var c = 0; c < COLS; c++) {
-      frozen[r][c] = 0;
-    }
+    for (var c = 0; c < COLS; c++) frozen[r][c] = 0;
   }
   var lv = getLevelConfig();
   var lvNum = lv.level || currentLevel + 1;
-  if (lvNum < 5) return; // 第5关之前无冻结格
-
-  // 冻结格数量：基础4格，每关+2，最多18格
+  if (lvNum < 5) return;
   var frozenCount = Math.min(18, 4 + (lvNum - 5) * 2);
   var candidates = [];
-  for (var r = 0; r < ROWS; r++) {
-    for (var c = 0; c < COLS; c++) {
-      candidates.push([r, c]);
-    }
-  }
-  // 随机打乱
+  for (var r = 0; r < ROWS; r++)
+    for (var c = 0; c < COLS; c++) candidates.push([r, c]);
   for (var i = candidates.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
     var tmp = candidates[i]; candidates[i] = candidates[j]; candidates[j] = tmp;
   }
   for (var i = 0; i < frozenCount; i++) {
     var rr = candidates[i];
-    frozen[rr[0]][rr[1]] = Math.floor(Math.random() * 2) + 2; // HP: 2 or 3
+    frozen[rr[0]][rr[1]] = Math.floor(Math.random() * 2) + 2;
   }
   drawBoard();
 }
 
 function drawFrozenOverlay() {
-  // 在棋盘上绘制冻结格覆盖层
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
       if (frozen[r][c] <= 0) continue;
-      var x = c * CELL, y = r * CELL;
-      // 半透明冰蓝色覆盖
-      ctx.fillStyle = 'rgba(100,180,255,0.35)';
+      var x = offsetX + c * CELL, y = offsetY + r * CELL;
+      // 冰蓝色半透明覆盖
+      ctx.fillStyle = "rgba(100,200,255,0.35)";
       ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-      // 冰晶网格线
-      ctx.strokeStyle = 'rgba(180,220,255,0.6)';
+      // 冰晶网格纹理
+      ctx.strokeStyle = "rgba(180,230,255,0.6)";
       ctx.lineWidth = 1;
-      for (var fx = 2; fx < CELL; fx += 10) {
-        ctx.beginPath(); ctx.moveTo(x + fx, y + 2); ctx.lineTo(x + fx, y + CELL - 2); ctx.stroke();
+      for (var dx = 0; dx < CELL; dx += 8) {
+        ctx.beginPath(); ctx.moveTo(x+dx, y); ctx.lineTo(x+dx, y+CELL); ctx.stroke();
       }
-      for (var fy = 2; fy < CELL; fy += 10) {
-        ctx.beginPath(); ctx.moveTo(x + 2, y + fy); ctx.lineTo(x + CELL - 2, y + fy); ctx.stroke();
-      }
-      // 冻结HP数字（显示在左上角）
-      ctx.fillStyle = '#FFF';
-      ctx.font = 'bold ' + (CELL * 0.28) + 'px sans-serif';
-      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      // HP 数字
+      ctx.fillStyle = "#0066CC"; ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillText(frozen[r][c], x + 3, y + 2);
-      // 冰块 emoji（中心）
-      ctx.font = (CELL * 0.5) + 'px sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('\u2744', x + CELL/2, y + CELL/2);
+      // 冰晶图标
+      ctx.font = "13px sans-serif";
+      ctx.fillText("❄️", x + CELL - 18, y + CELL - 18);
     }
   }
 }
 
-function thawAdjacent(eliminatedPositions) {
-  // 消除后，检查冻结格：如果其邻居在被消除位置中，则HP-1，HP=0时解冻
-  for (var r = 0; r < ROWS; r++) {
-    for (var c = 0; c < COLS; c++) {
-      if (frozen[r][c] <= 0) continue;
-      // 检查上下左右四个邻居
-      var neighbors = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
-      for (var ni = 0; ni < neighbors.length; ni++) {
-        var nr = neighbors[ni][0], nc = neighbors[ni][1];
-        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
-        // 检查这个邻居是否在被消除的位置中
-        for (var pi = 0; pi < eliminatedPositions.length; pi++) {
-          if (eliminatedPositions[pi].r === nr && eliminatedPositions[pi].c === nc) {
-            frozen[r][c]--;
-            if (frozen[r][c] <= 0) {
-              frozen[r][c] = 0;
-            }
-            break;
-          }
-        }
-        if (frozen[r][c] <= 0) break;
+function thawAdjacent(r, c) {
+  // 在 (r,c) 消除后，解冻相邻冻结格
+  var dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+  for (var d = 0; d < dirs.length; d++) {
+    var nr = r + dirs[d][0], nc = c + dirs[d][1];
+    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && frozen[nr][nc] > 0) {
+      frozen[nr][nc]--;
+      if (frozen[nr][nc] <= 0) {
+        frozen[nr][nc] = 0;
       }
     }
   }
-  drawBoard();
 }
 
 function countFrozen() {
