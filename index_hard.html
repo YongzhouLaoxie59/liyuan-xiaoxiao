@@ -2458,8 +2458,8 @@ function drawBoard(flash) {
       ctx.shadowBlur = 0; ctx.restore();
     }
     if (flash) { ctx.fillStyle = flash; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    drawFrozenOverlay();
   } catch (e) { console.error('drawBoard error:', e); }
-  drawFrozenOverlay();
 }
 
 // ======================== UI ========================
@@ -2551,17 +2551,17 @@ function endGame(won) {
 
 function saveProgress(lvl) {
   if (lvl === undefined) lvl = currentLevel;
-  try { localStorage.setItem('liyuan_level', String(lvl)); } catch(e) {}
+  try { localStorage.setItem('liyuan_level_hard', String(lvl)); } catch(e) {}
 }
 function loadProgress() {
   try {
-    var v = localStorage.getItem('liyuan_level');
+    var v = localStorage.getItem('liyuan_level_hard');
     if (v !== null) { var n = parseInt(v, 10); if (!isNaN(n) && n >= 0 && n < LEVELS.length) return n; }
   } catch(e) {}
   return 0;
 }
 function clearProgress() {
-  try { localStorage.removeItem('liyuan_level'); } catch(e) {}
+  try { localStorage.removeItem('liyuan_level_hard'); } catch(e) {}
 }
 
 function nextAction() {
@@ -2962,28 +2962,23 @@ function initFrozen() {
     var rr = candidates[i];
     frozen[rr[0]][rr[1]] = Math.floor(Math.random() * 2) + 2;
   }
-  drawBoard();
 }
 
 function drawFrozenOverlay() {
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
       if (frozen[r][c] <= 0) continue;
-      var x = offsetX + c * CELL, y = offsetY + r * CELL;
-      // 冰蓝色半透明覆盖
+      var x = c * CELL, y = r * CELL;
       ctx.fillStyle = "rgba(100,200,255,0.35)";
       ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-      // 冰晶网格纹理
       ctx.strokeStyle = "rgba(180,230,255,0.6)";
       ctx.lineWidth = 1;
       for (var dx = 0; dx < CELL; dx += 8) {
         ctx.beginPath(); ctx.moveTo(x+dx, y); ctx.lineTo(x+dx, y+CELL); ctx.stroke();
       }
-      // HP 数字
       ctx.fillStyle = "#0066CC"; ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillText(frozen[r][c], x + 3, y + 2);
-      // 冰晶图标
       ctx.font = "13px sans-serif";
       ctx.fillText("❄️", x + CELL - 18, y + CELL - 18);
     }
@@ -2991,15 +2986,12 @@ function drawFrozenOverlay() {
 }
 
 function thawAdjacent(r, c) {
-  // 在 (r,c) 消除后，解冻相邻冻结格
   var dirs = [[-1,0],[1,0],[0,-1],[0,1]];
   for (var d = 0; d < dirs.length; d++) {
     var nr = r + dirs[d][0], nc = c + dirs[d][1];
     if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && frozen[nr][nc] > 0) {
       frozen[nr][nc]--;
-      if (frozen[nr][nc] <= 0) {
-        frozen[nr][nc] = 0;
-      }
+      if (frozen[nr][nc] <= 0) frozen[nr][nc] = 0;
     }
   }
 }
@@ -3009,7 +3001,6 @@ function countFrozen() {
   for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) if (frozen[r][c] > 0) cnt++;
   return cnt;
 }
-// =============================================================
 </script>
 </body>
 </html>
