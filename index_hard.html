@@ -2032,21 +2032,24 @@ function checkWin() {
 function hasValidMoves() {
   // 先检查通关条件：如果已经过关，不应该触发重排/失败
   if (checkWin()) return true;
-  // 只检测相邻交换（上下左右），和用户实际拖拽/点击操作一致
+  // 只检测相邻交换（上下左右），用直接数组操作绕过冻结检查
+  // （检测的是"是否存在可消除的相邻对"，不考虑冻结格限制）
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
       if (grid[r][c] === -1) continue;
-      // 向右相邻交换
-      if (c + 1 < COLS) {
-        swap(r, c, r, c + 1);
-        if (findMatches().length > 0) { swap(r, c, r, c + 1); return true; }
-        swap(r, c, r, c + 1);
+      // 向右相邻交换（临时，不走 swap() 避免冻结拦截）
+      if (c + 1 < COLS && grid[r][c+1] !== -1) {
+        var t = grid[r][c]; grid[r][c] = grid[r][c+1]; grid[r][c+1] = t;
+        var ok = findMatches().length > 0;
+        t = grid[r][c]; grid[r][c] = grid[r][c+1]; grid[r][c+1] = t;
+        if (ok) return true;
       }
-      // 向下相邻交换（向上和向左已被上面覆盖）
-      if (r + 1 < ROWS) {
-        swap(r, c, r + 1, c);
-        if (findMatches().length > 0) { swap(r, c, r + 1, c); return true; }
-        swap(r, c, r + 1, c);
+      // 向下相邻交换
+      if (r + 1 < ROWS && grid[r+1][c] !== -1) {
+        var t = grid[r][c]; grid[r][c] = grid[r+1][c]; grid[r+1][c] = t;
+        var ok = findMatches().length > 0;
+        t = grid[r][c]; grid[r][c] = grid[r+1][c]; grid[r+1][c] = t;
+        if (ok) return true;
       }
     }
   }
@@ -2213,23 +2216,33 @@ async function playTurn(r1,c1,r2,c2) {
 }
 
 // ======================== 重排逻辑 ========================
+var _reshuffleTimer = null;
 function showReshuffleModal() {
+  if (_reshuffleTimer) clearTimeout(_reshuffleTimer);
   animating = true;
-  var remaining = countRemaining();
-  document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
-  document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
-  var freeBtn = document.getElementById('reshuffle-free-btn');
-  var adBtn = document.getElementById('reshuffle-ad-btn');
-  freeBtn.style.display = 'none';
-  adBtn.style.display = 'inline-block';
-  adBtn.textContent = t('reshuffleAd');
-  document.getElementById('reshuffle-modal').classList.add('show');
+  // 延迟800ms再确认一次，避免在棋盘refill中间状态误判
+  _reshuffleTimer = setTimeout(function() {
+    _reshuffleTimer = null;
+    if (hasValidMoves()) {
+      animating = false; updateUI(); return; // 误判，继续游戏
+    }
+    var remaining = countRemaining();
+    document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
+    document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
+    var freeBtn = document.getElementById('reshuffle-free-btn');
+    var adBtn = document.getElementById('reshuffle-ad-btn');
+    freeBtn.style.display = 'none';
+    adBtn.style.display = 'inline-block';
+    adBtn.textContent = t('reshuffleAd');
+    document.getElementById('reshuffle-modal').classList.add('show');
+  }, 800);
 }
 
 function closeReshuffleModal() {
+  if (_reshuffleTimer) { clearTimeout(_reshuffleTimer); _reshuffleTimer = null; }
   document.getElementById('reshuffle-modal').classList.remove('show');
   animating = false;
-  endGame(false);
+  updateUI();
 }
 
 function doReshuffle(needsAd) {
@@ -2624,14 +2637,29 @@ function getCellFromEvent(e, touchIdx) {
 // 将棋子从 (r1,c1) 滑到 (r2,c2)，中间棋子依次移位。要求同行或同列。
 function slidePiece(r1, c1, r2, c2) {
   if (r1 === r2 && c1 === c2) return;
+  // 冻结格检查：起点或路径上任何格子是冻结格就拒绝
+  if (frozen && frozen[r1] && frozen[r1][c1] > 0) return;
   var piece = grid[r1][c1];
   if (r1 === r2) {
     var d = c2 > c1 ? 1 : -1;
-    for (var c = c1; c !== c2; c += d) { grid[r1][c] = grid[r1][c + d]; }
+    for (var c = c1; c !== c2; c += d) {
+      if (frozen && frozen[r1] && frozen[r1][c + d] > 0) {
+        // 路径上有冻结格，滑到冻结格前一格
+        grid[r1][c1] = piece; // 还原（不移动）
+        return;
+      }
+      grid[r1][c] = grid[r1][c + d];
+    }
     grid[r1][c2] = piece;
   } else if (c1 === c2) {
     var d = r2 > r1 ? 1 : -1;
-    for (var r = r1; r !== r2; r += d) { grid[r][c1] = grid[r + d][c1]; }
+    for (var r = r1; r !== r2; r += d) {
+      if (frozen && frozen[r + d] && frozen[r + d][c1] > 0) {
+        grid[r1][c1] = piece; // 还原（不移动）
+        return;
+      }
+      grid[r][c1] = grid[r + d][c1];
+    }
     grid[r2][c1] = piece;
   }
 }
@@ -2639,6 +2667,7 @@ function slidePiece(r1, c1, r2, c2) {
 function handlePointerDown(cell) {
   if (cell.row < 0 || cell.row >= ROWS || cell.col < 0 || cell.col >= COLS) return;
   if (grid[cell.row][cell.col] === -1) return; // 空格子不响应
+  if (frozen && frozen[cell.row] && frozen[cell.row][cell.col] > 0) return; // 冻结格不响应
 
   // 技能模式
   if (selectedSkill) {
