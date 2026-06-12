@@ -2034,27 +2034,47 @@ function checkWin() {
 function hasValidMoves() {
   // 先检查通关条件：如果已经过关，不应该触发重排/失败
   if (checkWin()) return true;
-  // 只检测相邻交换（上下左右），用显式备份恢复保证不破坏棋盘
+  // 只检测相邻非空格间的交换，与用户实际操作一致
+  // 使用显式备份/恢复，确保100%还原棋盘
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
-      if (grid[r][c] === -1) continue;
-      // 向右相邻交换
-      if (c + 1 < COLS && grid[r][c+1] !== -1) {
-        var a = grid[r][c], b = grid[r][c+1];
-        grid[r][c] = b; grid[r][c+1] = a;
-        var ok = findMatches().length > 0;
-        grid[r][c] = a; grid[r][c+1] = b; // 用原始值恢复
-        if (ok) return true;
+      var t1 = grid[r][c];
+      if (t1 === -1) continue;
+      // 向右相邻交换（双方必须都是非空格）
+      if (c + 1 < COLS) {
+        var t2 = grid[r][c+1];
+        if (t2 !== -1) {
+          grid[r][c] = t2; grid[r][c+1] = t1;
+          var hasMatch = findMatches().length > 0;
+          grid[r][c] = t1; grid[r][c+1] = t2; // 显式还原
+          if (hasMatch) return true;
+        }
       }
-      // 向下相邻交换（向右和向下覆盖所有方向，无需检测左和上）
-      if (r + 1 < ROWS && grid[r+1][c] !== -1) {
-        var a = grid[r][c], b = grid[r+1][c];
-        grid[r][c] = b; grid[r+1][c] = a;
-        var ok = findMatches().length > 0;
-        grid[r][c] = a; grid[r+1][c] = b; // 用原始值恢复
-        if (ok) return true;
+      // 向下相邻交换（双方必须都是非空格）
+      if (r + 1 < ROWS) {
+        var t3 = grid[r+1][c];
+        if (t3 !== -1) {
+          grid[r][c] = t3; grid[r+1][c] = t1;
+          var hasMatch = findMatches().length > 0;
+          grid[r][c] = t1; grid[r+1][c] = t3; // 显式还原
+          if (hasMatch) return true;
+        }
       }
     }
+  }
+  // 诊断：如果无有效移动，打印棋盘状态帮助排查
+  if (typeof console !== 'undefined') {
+    var types = ['生','旦','净','末','丑'];
+    var dump = '=== hasValidMoves=FALSE (HARD), board dump ===';
+    for (var rr = 0; rr < ROWS; rr++) {
+      var line = 'row'+rr+': ';
+      for (var cc = 0; cc < COLS; cc++) {
+        var v = grid[rr][cc];
+        line += (v === -1 ? '·' : types[v]) + (frozen[rr]&&frozen[rr][cc]>0?'❄':' ') + ' ';
+      }
+      dump += '\n  ' + line;
+    }
+    console.warn(dump);
   }
   return false;
 }
@@ -2219,36 +2239,27 @@ async function playTurn(r1,c1,r2,c2) {
 }
 
 // ======================== 重排逻辑 ========================
-var _reshuffleTimer = null, _retryCount = 0;
+var _reshuffleTimer = null;
 function showReshuffleModal() {
   if (_reshuffleTimer) clearTimeout(_reshuffleTimer);
   animating = true;
-  _retryCount = 0;
-  // 延迟800ms后第一次确认，如果棋盘已稳定且有合法移动则恢复
+  // 短暂延迟等棋盘动画稳定后确认（300ms足够drop动画完成）
   _reshuffleTimer = setTimeout(function() {
+    _reshuffleTimer = null;
     if (hasValidMoves()) {
-      _reshuffleTimer = null;
-      animating = false; updateUI(); return; // 误判，继续游戏
+      animating = false; updateUI(); return;
     }
-    // 第一次确认无合法移动，500ms后再确认一次（双重保险）
-    _retryCount++;
-    _reshuffleTimer = setTimeout(function() {
-      _reshuffleTimer = null;
-      if (hasValidMoves()) {
-        animating = false; updateUI(); return; // 第二次确认发现有合法移动，恢复
-      }
-      // 两次确认都无合法移动，弹出重排窗
-      var remaining = countRemaining();
-      document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
-      document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
-      var freeBtn = document.getElementById('reshuffle-free-btn');
-      var adBtn = document.getElementById('reshuffle-ad-btn');
-      freeBtn.style.display = 'none';
-      adBtn.style.display = 'inline-block';
-      adBtn.textContent = t('reshuffleAd');
-      document.getElementById('reshuffle-modal').classList.add('show');
-    }, 500);
-  }, 800);
+    // 确认无解，弹出重排窗
+    var remaining = countRemaining();
+    document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
+    document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
+    var freeBtn = document.getElementById('reshuffle-free-btn');
+    var adBtn = document.getElementById('reshuffle-ad-btn');
+    freeBtn.style.display = 'none';
+    adBtn.style.display = 'inline-block';
+    adBtn.textContent = t('reshuffleAd');
+    document.getElementById('reshuffle-modal').classList.add('show');
+  }, 300);
 }
 
 function closeReshuffleModal() {
