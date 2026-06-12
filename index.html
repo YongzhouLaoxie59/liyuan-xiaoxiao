@@ -2210,28 +2210,32 @@ async function playTurn(r1,c1,r2,c2) {
 }
 
 // ======================== 重排逻辑 ========================
-var _reshuffleTimer = null;
+var _reshuffleTimer = null, _retryCount = 0;
 function showReshuffleModal() {
   if (_reshuffleTimer) clearTimeout(_reshuffleTimer);
   animating = true;
+  _retryCount = 0;
   _reshuffleTimer = setTimeout(function() {
-    _reshuffleTimer = null;
     if (hasValidMoves()) {
-      // 误判，恢复原状态继续游戏
-      animating = false;
-      updateUI();
-      return;
+      _reshuffleTimer = null;
+      animating = false; updateUI(); return;
     }
-    // 确认真的无路可走，显示重排弹窗
-    var remaining = countRemaining();
-    document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
-    document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
-    var freeBtn = document.getElementById('reshuffle-free-btn');
-    var adBtn = document.getElementById('reshuffle-ad-btn');
-    freeBtn.style.display = 'none';
-    adBtn.style.display = 'inline-block';
-    adBtn.textContent = t('reshuffleAd');
-    document.getElementById('reshuffle-modal').classList.add('show');
+    _retryCount++;
+    _reshuffleTimer = setTimeout(function() {
+      _reshuffleTimer = null;
+      if (hasValidMoves()) {
+        animating = false; updateUI(); return;
+      }
+      var remaining = countRemaining();
+      document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
+      document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
+      var freeBtn = document.getElementById('reshuffle-free-btn');
+      var adBtn = document.getElementById('reshuffle-ad-btn');
+      freeBtn.style.display = 'none';
+      adBtn.style.display = 'inline-block';
+      adBtn.textContent = t('reshuffleAd');
+      document.getElementById('reshuffle-modal').classList.add('show');
+    }, 500);
   }, 800);
 }
 

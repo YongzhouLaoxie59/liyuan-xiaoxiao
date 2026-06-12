@@ -2022,6 +2022,8 @@ function checkWin() {
   var lv = getLevelConfig();
   // 第2关起：必须等所有脸谱都落下后才能判定胜利
   if (currentLevel > 0 && masksSpawned < lv.masksTarget) return false;
+  // 冻结格检查：所有冻结格必须解冻才算通关
+  if (countFrozen() > 0) return false;
   var counts = countByType();
   for (var i = 0; i < counts.length; i++) {
     if (counts[i] >= 3) return false; // 有某种脸谱剩余 >= 3，还未过关
@@ -2032,23 +2034,24 @@ function checkWin() {
 function hasValidMoves() {
   // 先检查通关条件：如果已经过关，不应该触发重排/失败
   if (checkWin()) return true;
-  // 只检测相邻交换（上下左右），用直接数组操作绕过冻结检查
-  // （检测的是"是否存在可消除的相邻对"，不考虑冻结格限制）
+  // 只检测相邻交换（上下左右），用显式备份恢复保证不破坏棋盘
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
       if (grid[r][c] === -1) continue;
-      // 向右相邻交换（临时，不走 swap() 避免冻结拦截）
+      // 向右相邻交换
       if (c + 1 < COLS && grid[r][c+1] !== -1) {
-        var t = grid[r][c]; grid[r][c] = grid[r][c+1]; grid[r][c+1] = t;
+        var a = grid[r][c], b = grid[r][c+1];
+        grid[r][c] = b; grid[r][c+1] = a;
         var ok = findMatches().length > 0;
-        t = grid[r][c]; grid[r][c] = grid[r][c+1]; grid[r][c+1] = t;
+        grid[r][c] = a; grid[r][c+1] = b; // 用原始值恢复
         if (ok) return true;
       }
-      // 向下相邻交换
+      // 向下相邻交换（向右和向下覆盖所有方向，无需检测左和上）
       if (r + 1 < ROWS && grid[r+1][c] !== -1) {
-        var t = grid[r][c]; grid[r][c] = grid[r+1][c]; grid[r+1][c] = t;
+        var a = grid[r][c], b = grid[r+1][c];
+        grid[r][c] = b; grid[r+1][c] = a;
         var ok = findMatches().length > 0;
-        t = grid[r][c]; grid[r][c] = grid[r+1][c]; grid[r+1][c] = t;
+        grid[r][c] = a; grid[r+1][c] = b; // 用原始值恢复
         if (ok) return true;
       }
     }
@@ -2216,25 +2219,35 @@ async function playTurn(r1,c1,r2,c2) {
 }
 
 // ======================== 重排逻辑 ========================
-var _reshuffleTimer = null;
+var _reshuffleTimer = null, _retryCount = 0;
 function showReshuffleModal() {
   if (_reshuffleTimer) clearTimeout(_reshuffleTimer);
   animating = true;
-  // 延迟800ms再确认一次，避免在棋盘refill中间状态误判
+  _retryCount = 0;
+  // 延迟800ms后第一次确认，如果棋盘已稳定且有合法移动则恢复
   _reshuffleTimer = setTimeout(function() {
-    _reshuffleTimer = null;
     if (hasValidMoves()) {
+      _reshuffleTimer = null;
       animating = false; updateUI(); return; // 误判，继续游戏
     }
-    var remaining = countRemaining();
-    document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
-    document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
-    var freeBtn = document.getElementById('reshuffle-free-btn');
-    var adBtn = document.getElementById('reshuffle-ad-btn');
-    freeBtn.style.display = 'none';
-    adBtn.style.display = 'inline-block';
-    adBtn.textContent = t('reshuffleAd');
-    document.getElementById('reshuffle-modal').classList.add('show');
+    // 第一次确认无合法移动，500ms后再确认一次（双重保险）
+    _retryCount++;
+    _reshuffleTimer = setTimeout(function() {
+      _reshuffleTimer = null;
+      if (hasValidMoves()) {
+        animating = false; updateUI(); return; // 第二次确认发现有合法移动，恢复
+      }
+      // 两次确认都无合法移动，弹出重排窗
+      var remaining = countRemaining();
+      document.getElementById('reshuffle-title').textContent = t('reshuffleTitle');
+      document.getElementById('reshuffle-desc').textContent = '剩余'+t('eliminated')+'：' + remaining + ' 个，无路可走';
+      var freeBtn = document.getElementById('reshuffle-free-btn');
+      var adBtn = document.getElementById('reshuffle-ad-btn');
+      freeBtn.style.display = 'none';
+      adBtn.style.display = 'inline-block';
+      adBtn.textContent = t('reshuffleAd');
+      document.getElementById('reshuffle-modal').classList.add('show');
+    }, 500);
   }, 800);
 }
 
