@@ -2054,7 +2054,7 @@ function hasValidMoves() {
 }
 
 function swap(r1,c1,r2,c2){
-  if (frozen[r1][c1] > 0 || frozen[r2][c2] > 0) return;
+  if ((frozen[r1] && frozen[r1][c1] > 0) || (frozen[r2] && frozen[r2][c2] > 0)) return;
   var t=grid[r1][c1];grid[r1][c1]=grid[r2][c2];grid[r2][c2]=t;
 }
 
@@ -2965,9 +2965,10 @@ function initFrozen() {
 }
 
 function drawFrozenOverlay() {
+  if (!frozen || !frozen.length) return;
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
-      if (frozen[r][c] <= 0) continue;
+      if (!frozen[r] || frozen[r][c] <= 0) continue;
       var x = c * CELL, y = r * CELL;
       ctx.fillStyle = "rgba(100,200,255,0.35)";
       ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
@@ -2986,10 +2987,11 @@ function drawFrozenOverlay() {
 }
 
 function thawAdjacent(r, c) {
+  if (!frozen || !frozen.length) return;
   var dirs = [[-1,0],[1,0],[0,-1],[0,1]];
   for (var d = 0; d < dirs.length; d++) {
     var nr = r + dirs[d][0], nc = c + dirs[d][1];
-    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && frozen[nr][nc] > 0) {
+    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && frozen[nr] && frozen[nr][nc] > 0) {
       frozen[nr][nc]--;
       if (frozen[nr][nc] <= 0) frozen[nr][nc] = 0;
     }
@@ -2997,8 +2999,9 @@ function thawAdjacent(r, c) {
 }
 
 function countFrozen() {
+  if (!frozen || !frozen.length) return 0;
   var cnt = 0;
-  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) if (frozen[r][c] > 0) cnt++;
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) if (frozen[r] && frozen[r][c] > 0) cnt++;
   return cnt;
 }
 </script>
