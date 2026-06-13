@@ -439,7 +439,8 @@ body {
     <p id="reshuffle-desc">剩余脸谱：0 个</p>
     <button class="free-btn" id="reshuffle-free-btn" onclick="doReshuffle(false)">免费重排</button>
     <button class="ad-btn" id="reshuffle-ad-btn" onclick="doReshuffle(true)" style="display:none">📺 看广告重排</button>
-    <button class="skip-btn" onclick="closeReshuffleModal()">不重排，结束此关</button>
+    <button class="skip-btn" onclick="closeReshuffleModal()">继续游戏</button>
+    <button class="skip-btn" onclick="closeReshuffleModal()" style="margin-top:4px;font-size:11px;color:#666;border:none;background:none;">（如果还能消，点这里关闭）</button>
   </div>
 
   <!-- 选关弹窗 -->
@@ -2022,6 +2023,15 @@ function checkWin() {
   var lv = getLevelConfig();
   // 第2关起：必须等所有脸谱都落下后才能判定胜利
   if (currentLevel > 0 && masksSpawned < lv.masksTarget) return false;
+  // 残局保护：棋子太少无法操作时，自动解冻并判赢
+  var remaining = countRemaining();
+  if (remaining <= 8 && countFrozen() > 0) {
+    console.warn('[checkWin] deadlock protection: remaining='+remaining+' <=8, auto-thawing all frozen');
+    for (var r = 0; r < ROWS; r++)
+      for (var c = 0; c < COLS; c++)
+        if (frozen[r] && frozen[r][c] > 0) frozen[r][c] = 0;
+    drawBoard();
+  }
   // 冻结格检查：所有冻结格必须解冻才算通关
   if (countFrozen() > 0) return false;
   var counts = countByType();
@@ -2257,31 +2267,115 @@ async function playTurn(r1,c1,r2,c2) {
 
 // ======================== 重排逻辑 ========================
 var _reshuffleTimer = null;
+// 静默重排计数器：每关首次自动静默重排，之后才弹窗
+var _silentReshuffleCount = 0;
 function showReshuffleModal() {
   if (_reshuffleTimer) clearTimeout(_reshuffleTimer);
   animating = true;
-  // 延迟等棋盘动画稳定后确认（500ms，手机端更可靠）
+  // 第一阶段：延迟等棋盘动画稳定后确认
   _reshuffleTimer = setTimeout(function() {
     _reshuffleTimer = null;
-    // 关键：先检查是否有未清理的匹配（消除链可能漏掉）
+    // 检查是否有未清理的残留匹配
     var standing = findMatches();
     if (standing.length > 0) {
-      console.warn('[showReshuffleModal-HARD] Standing matches found: '+standing.length+', auto-clearing');
+      console.warn('[reshuffle] Standing matches found: '+standing.length+', auto-clearing');
       autoClearMatches(standing, function() {
         if (checkWin()) { endGame(true); return; }
-        if (!hasValidMoves()) {
-          showReshuffleNow();
-        } else {
-          animating = false; updateUI();
-        }
+        // 清理完残留后重新检查
+        reshuffleStage2();
       });
       return;
     }
-    if (hasValidMoves()) {
-      animating = false; updateUI(); return;
-    }
+    reshuffleStage2();
+  }, 600);
+}
+
+// 第二阶段：再次检查，如果无路可走则尝试静默重排
+function reshuffleStage2() {
+  if (hasValidMoves()) { animating = false; updateUI(); return; }
+  var remaining = countRemaining();
+  console.warn('[reshuffle] Stage2: no valid moves, remaining='+remaining+' silentUsed='+_silentReshuffleCount);
+
+  // 如果棋子太少（<=6），直接判赢（残局保护）
+  if (remaining <= 6) {
+    console.warn('[reshuffle] remaining<=' + remaining + ', auto-win');
+    // 解冻所有冻结格
+    for (var r = 0; r < ROWS; r++)
+      for (var c = 0; c < COLS; c++)
+        if (frozen[r] && frozen[r][c] > 0) frozen[r][c] = 0;
+    drawBoard();
+    endGame(true);
+    return;
+  }
+
+  // 尝试静默自动重排（每关最多1次）
+  if (_silentReshuffleCount < 1) {
+    _silentReshuffleCount++;
+    console.warn('[reshuffle] Attempting silent auto-reshuffle (#'+_silentReshuffleCount+')...');
+    trySilentReshuffle();
+  } else {
+    // 已经用过静默重排了，直接弹窗
     showReshuffleNow();
-  }, 500);
+  }
+}
+
+// 静默自动重排：不打断玩家，不弹窗，不收费
+function trySilentReshuffle() {
+  showMessage('自动调整中…');
+  var attempts = 0;
+  var ok = false;
+  while (attempts < 100 && !ok) {
+    shuffleBoard();
+    // 先清理可能的连锁消除
+    var immediate = findMatches();
+    if (immediate.length > 0) {
+      processMatches(immediate);
+      refillEmptyCells();
+      attempts++;
+      continue;
+    }
+    if (hasValidMoves()) ok = true;
+    attempts++;
+  }
+  drawBoard();
+
+  // 重排后如果有匹配，先自动消除
+  var afterMatches = findMatches();
+  if (afterMatches.length > 0) {
+    console.log('[silentReshuffle] found '+afterMatches.length+' matches after shuffle, clearing...');
+    animating = true;
+    (async function() {
+      var safetyRounds = 0;
+      var matches = afterMatches;
+      while (matches.length > 0 || safetyRounds < 3) {
+        if (matches.length === 0) {
+          safetyRounds++;
+          matches = findMatches();
+          if (matches.length === 0) break;
+        }
+        var maxLen = processMatches(matches); sfxMatch(maxLen);
+        await animateClear(); refillEmptyCells(); await animateDrop(); drawBoard(); await sleep(180);
+        matches = findMatches();
+      }
+      drawBoard();
+      hideMessage();
+      if (checkWin()) { endGame(true); return; }
+      if (!hasValidMoves()) {
+        // 静默重排后仍无路可走，这次真的弹窗
+        showReshuffleNow();
+      } else {
+        animating = false; updateUI();
+      }
+    })();
+  } else {
+    hideMessage();
+    if (hasValidMoves()) {
+      animating = false; updateUI();
+    } else {
+      // 静默重排后仍无路可走
+      showReshuffleNow();
+    }
+  }
 }
 
 function autoClearMatches(initialMatches, callback) {
@@ -2668,7 +2762,7 @@ async function startLevel(skipCurtain) {
   var lv=getLevelConfig();
   score=0; stepCount=0; masksTotal=lv.masksTarget; masksEliminated=0; masksSpawned=64;
   energy=0;
-  reshuffleUsed=0;
+  reshuffleUsed=0; _silentReshuffleCount=0;
   selected=null; selectedSkill=null; gameOver=false; animating=true;
   cancelSkill(); createGrid(); initFrozen(); updateUI();
   document.getElementById('toast').className='';
