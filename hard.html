@@ -435,9 +435,10 @@ body {
 
   <!-- 重排弹窗 -->
   <div id="reshuffle-modal">
-    <h3 id="reshuffle-title">棋盘调整中</h3>
-    <p id="reshuffle-desc">正在自动调整棋盘…</p>
-    <button class="skip-btn" onclick="closeReshuffleModal()">关闭</button>
+    <h3>棋盘卡住了</h3>
+    <p>换个布局继续闯关吧！</p>
+    <button class="ad-btn" onclick="doReshuffle(true)">看广告重排</button>
+    <button class="skip-btn" onclick="closeReshuffleModal()">继续游戏</button>
   </div>
 
   <!-- 选关弹窗 -->
@@ -2018,26 +2019,19 @@ function countByType() {
 // 通关条件：每种脸谱剩余数量 <= 2（即不存在某种脸谱剩余 >= 3 个）
 // 残局兜底：剩余棋子很少时直接判赢（不管冻结格、不管生成数量）
 function checkWin() {
-  var remaining = countRemaining();
-  // 【核心修复】剩余<=10个棋子时直接判赢，避免残局死锁
-  if (remaining <= 10) {
-    // 自动解冻所有冻结格（视觉效果）
-    if (countFrozen() > 0) {
-      for (var r = 0; r < ROWS; r++)
-        for (var c = 0; c < COLS; c++)
-          if (frozen[r] && frozen[r][c] > 0) frozen[r][c] = 0;
-      drawBoard();
-    }
-    console.warn('[checkWin] AUTO-WIN: remaining='+remaining+' <=10');
-    return true;
-  }
-  // 正常路径：检查各类型数量
+  // 正确判赢：没有任何一种棋子≥3个，说明不可能再形成匹配，过关
   var counts = countByType();
   for (var i = 0; i < counts.length; i++) {
     if (counts[i] >= 3) return false;
   }
-  // 冻结格：还有冻结格但各类型都<3且棋子>10 → 需要继续解冻
-  if (countFrozen() > 0) return false;
+  // 所有类型都≤2，不可能再消除 → 判赢
+  // 自动解冻所有剩余冻结格（过关奖励视觉效果）
+  if (countFrozen() > 0) {
+    for (var r = 0; r < ROWS; r++)
+      for (var c = 0; c < COLS; c++)
+        if (frozen[r] && frozen[r][c] > 0) frozen[r][c] = 0;
+    drawBoard();
+  }
   return true;
 }
 
@@ -2050,49 +2044,71 @@ function hasValidMoves() {
     if (typeof console !== 'undefined') console.warn('[hasValidMoves] found '+standing.length+' standing matches, returning true');
     return true;
   }
-  // 检测相邻非空格间的交换，与用户实际操作一致
+  // 检测相邻非空格间的交换（点击模式）—— 跳过冻结格
   for (var r = 0; r < ROWS; r++) {
     for (var c = 0; c < COLS; c++) {
       var t1 = grid[r][c];
       if (t1 === -1) continue;
-      // 向右相邻交换（双方必须都是非空格）
+      if (frozen && frozen[r] && frozen[r][c] > 0) continue;
       if (c + 1 < COLS) {
         var t2 = grid[r][c+1];
-        if (t2 !== -1) {
+        if (t2 !== -1 && (!frozen || !frozen[r] || frozen[r][c+1] <= 0)) {
           grid[r][c] = t2; grid[r][c+1] = t1;
-          var hasMatch = findMatches().length > 0;
+          if (findMatches().length > 0) { grid[r][c] = t1; grid[r][c+1] = t2; return true; }
           grid[r][c] = t1; grid[r][c+1] = t2;
-          if (hasMatch) return true;
         }
       }
-      // 向下相邻交换（双方必须都是非空格）
       if (r + 1 < ROWS) {
         var t3 = grid[r+1][c];
-        if (t3 !== -1) {
+        if (t3 !== -1 && (!frozen || !frozen[r+1] || frozen[r+1][c] <= 0)) {
           grid[r][c] = t3; grid[r+1][c] = t1;
-          var hasMatch2 = findMatches().length > 0;
+          if (findMatches().length > 0) { grid[r][c] = t1; grid[r+1][c] = t3; return true; }
           grid[r][c] = t1; grid[r+1][c] = t3;
-          if (hasMatch2) return true;
         }
       }
     }
   }
-  // 诊断：如果无有效移动，打印棋盘状态帮助排查
-  if (typeof console !== 'undefined') {
-    var typeNames = ['生','旦','净','末','丑'];
-    var counts = countByType();
-    var dump = '=== hasValidMoves=FALSE (HARD) ===';
-    dump += '\n  各类型: 生='+counts[0]+' 旦='+counts[1]+' 净='+counts[2]+' 末='+counts[3]+' 丑='+counts[4]+' ≥3=' + (counts[0]>=3||counts[1]>=3||counts[2]>=3||counts[3]>=3||counts[4]>=3?'YES':'NO');
-    dump += '\n  剩余总数='+countRemaining()+' 已生成='+masksSpawned+'/'+(getLevelConfig().masksTarget||'?')+' 关卡='+(currentLevel+1);
-    for (var rr = 0; rr < ROWS; rr++) {
-      var line = 'row'+rr+': ';
-      for (var cc = 0; cc < COLS; cc++) {
-        var v = grid[rr][cc];
-        line += (v === -1 ? '·' : typeNames[v]) + (frozen[rr]&&frozen[rr][cc]>0?'❄':' ') + ' ';
+  // 检测拖拽滑动（穿过空格移动棋子）
+  var hasEmpty = false;
+  for (var r = 0; r < ROWS && !hasEmpty; r++)
+    for (var c = 0; c < COLS && !hasEmpty; c++)
+      if (grid[r][c] === -1) hasEmpty = true;
+  if (hasEmpty) {
+    // 水平滑动
+    for (var r = 0; r < ROWS; r++) {
+      var rowHasGap = false;
+      for (var cc = 0; cc < COLS; cc++) { if (grid[r][cc] === -1) { rowHasGap = true; break; } }
+      if (!rowHasGap) continue;
+      for (var c1 = 0; c1 < COLS; c1++) {
+        if (grid[r][c1] === -1) continue;
+        if (frozen && frozen[r] && frozen[r][c1] > 0) continue;
+        for (var c2 = 0; c2 < COLS; c2++) {
+          if (c1 === c2) continue;
+          var saved = grid[r].slice();
+          slidePiece(r, c1, r, c2);
+          if (findMatches().length > 0) { grid[r] = saved; return true; }
+          grid[r] = saved;
+        }
       }
-      dump += '\n  ' + line;
     }
-    console.warn(dump);
+    // 垂直滑动
+    for (var c = 0; c < COLS; c++) {
+      var colHasGap = false;
+      for (var rr = 0; rr < ROWS; rr++) { if (grid[rr][c] === -1) { colHasGap = true; break; } }
+      if (!colHasGap) continue;
+      for (var r1 = 0; r1 < ROWS; r1++) {
+        if (grid[r1][c] === -1) continue;
+        if (frozen && frozen[r1] && frozen[r1][c] > 0) continue;
+        for (var r2 = 0; r2 < ROWS; r2++) {
+          if (r1 === r2) continue;
+          var colsaved = [];
+          for (var i = 0; i < ROWS; i++) colsaved.push(grid[i][c]);
+          slidePiece(r1, c, r2, c);
+          if (findMatches().length > 0) { for (var i = 0; i < ROWS; i++) grid[i][c] = colsaved[i]; return true; }
+          for (var i = 0; i < ROWS; i++) grid[i][c] = colsaved[i];
+        }
+      }
+    }
   }
   return false;
 }
@@ -2288,9 +2304,8 @@ function showReshuffleModal() {
 function onReshuffleComplete() {
   if (checkWin()) { endGame(true); return; }
   if (hasValidMoves()) { animating = false; updateUI(); return; }
-  // 无路可走 → 全自动静默重排（不弹窗、不看广告）
-  console.warn('[reshuffle] No valid moves, starting silent auto-reshuffle');
-  doSilentReshuffle();
+  // 确认无路可走 → 弹出重排弹窗
+  document.getElementById('reshuffle-modal').classList.add('show');
 }
 
 // 静默自动重排核心函数
