@@ -1805,10 +1805,14 @@ function showKnowledgeCard() {
   nextBtn.onclick = isLastLevel ? closeKcAndHome : closeKcAndNext;
 
   document.getElementById('knowledge-card').classList.add('show');
-  // 播放京剧背景音乐
+  // 播放京剧背景音乐：先停掉所有正在播放的，防止叠加
+  ['bgm-bawang','bgm-lihua','bgm-dingjun'].forEach(function(id){
+    var a = document.getElementById(id);
+    if (a) { a.pause(); a.currentTime = 0; }
+  });
   var bgmList = ['bgm-bawang', 'bgm-lihua', 'bgm-dingjun'];
-  var idx = Math.floor(Math.random() * 3);
-  var bgm = document.getElementById(bgmList[idx]);
+  var bgmIdx = Math.floor(Math.random() * 3);
+  var bgm = document.getElementById(bgmList[bgmIdx]);
   if (bgm) { bgm.currentTime = 0; bgm.play().catch(function(){}); }
 }
 
@@ -1850,7 +1854,8 @@ function showCopyDone() {
 
 function closeKnowledgeCard() {
   document.getElementById('knowledge-card').classList.remove('show');
-  // 暂停所有背景音乐
+  // 暂停所有背景音乐，并清除自动停止计时器
+  clearTimeout(window._bgmTimer);
   ['bgm-bawang','bgm-lihua','bgm-dingjun'].forEach(function(id){
     var a = document.getElementById(id);
     if (a) { a.pause(); a.currentTime = 0; }
