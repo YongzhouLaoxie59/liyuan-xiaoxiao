@@ -349,7 +349,9 @@ body {
 </style>
 </head>
 <body>
-<div id="container">
+  <!-- 京剧背景音乐（知识卡播放） -->
+  <audio id="bgm" src="bgm.wav" preload="auto" loop></audio>
+  <div id="container">
   <div class="curtain-top"></div>
   <div class="curtain-left"></div>
   <div class="curtain-right"></div>
@@ -1801,6 +1803,9 @@ function showKnowledgeCard() {
   nextBtn.onclick = isLastLevel ? closeKcAndHome : closeKcAndNext;
 
   document.getElementById('knowledge-card').classList.add('show');
+  // 播放京剧背景音乐
+  var bgm = document.getElementById('bgm');
+  if (bgm) { bgm.currentTime = 0; bgm.play().catch(function(){}); }
 }
 
 function switchKcLang(lang) {
@@ -1841,6 +1846,9 @@ function showCopyDone() {
 
 function closeKnowledgeCard() {
   document.getElementById('knowledge-card').classList.remove('show');
+  // 暂停背景音乐
+  var bgm = document.getElementById('bgm');
+  if (bgm) { bgm.pause(); bgm.currentTime = 0; }
 }
 
 function closeKcAndNext() {
