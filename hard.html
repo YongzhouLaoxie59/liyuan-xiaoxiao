@@ -1743,8 +1743,8 @@ function calcRating(levelIdx) {
 
 function showKnowledgeCard() {
   document.getElementById('overlay').classList.remove('show');
-  const idx = Math.min(currentLevel, KC_DATA.length - 1);
-  const card = KC_DATA[idx];
+  const kcIdx = Math.min(currentLevel, KC_DATA.length - 1);
+  const card = KC_DATA[kcIdx];
   const txt = card.text[kcCurrentLang] || card.text.zh;
   const levelIdx = Math.min(currentLevel, BEST_RECORDS.length - 1);
 
