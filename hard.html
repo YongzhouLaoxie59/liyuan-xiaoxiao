@@ -350,7 +350,9 @@ body {
 </head>
 <body>
   <!-- 京剧背景音乐（知识卡播放） -->
-  <audio id="bgm" src="bgm.wav" preload="auto" loop></audio>
+  <audio id="bgm-bawang" src="霸王别姬.mp3" preload="auto"></audio>
+  <audio id="bgm-lihua" src="梨花颂.mp3" preload="auto"></audio>
+  <audio id="bgm-dingjun" src="定军山.mp3" preload="auto"></audio>
   <div id="container">
   <div class="curtain-top"></div>
   <div class="curtain-left"></div>
@@ -1803,8 +1805,10 @@ function showKnowledgeCard() {
   nextBtn.onclick = isLastLevel ? closeKcAndHome : closeKcAndNext;
 
   document.getElementById('knowledge-card').classList.add('show');
-  // 播放京剧背景音乐
-  var bgm = document.getElementById('bgm');
+  // 随机选择一首京剧背景音乐播放
+  var bgmList = ['bgm-bawang', 'bgm-lihua', 'bgm-dingjun'];
+  var idx = Math.floor(Math.random() * 3);
+  var bgm = document.getElementById(bgmList[idx]);
   if (bgm) { bgm.currentTime = 0; bgm.play().catch(function(){}); }
 }
 
