@@ -8,411 +8,94 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:#1a0a0a; color:#e8d5b7; }
   
-  /* 顶部导航 */
-  .top-nav { position:fixed; top:0; left:0; right:0; z-index:100; 
-    background:rgba(26,10,10,0.95); border-bottom:1px solid #4a3a2a; 
-    display:flex; justify-content:center; gap:20px; padding:12px 16px; }
-  .top-nav a { color:#8a7555; text-decoration:none; font-size:14px; padding:6px 16px; 
-    border-radius:20px; transition:all .3s; cursor:pointer; }
-  .top-nav a.active, .top-nav a:hover { color:#c9a84c; background:#2a1a10; }
-  
-  /* 游戏区域 */
-  #game-section { padding-top:60px; }
-  .game-frame { width:100%; height:calc(100vh - 60px); border:none; }
-  
-  /* 问卷区域 */
-  #survey-section { display:none; padding:20px 16px 60px; max-width:600px; margin:0 auto; }
+  .container { max-width:800px; margin:0 auto; padding:20px 16px 60px; }
   
   .header { text-align:center; padding:32px 0 24px; }
   .header h1 { font-size:28px; color:#c9a84c; letter-spacing:4px; margin-bottom:8px; }
   .header .sub { font-size:14px; color:#8a7555; }
   
-  .section { margin-bottom:24px; }
   .section-title { font-size:18px; color:#c9a84c; border-left:3px solid #c9a84c; 
-    padding-left:12px; margin-bottom:16px; font-weight:bold; }
+    padding-left:12px; margin:32px 0 16px; font-weight:bold; }
   
-  .field { margin-bottom:18px; }
-  .field label { display:block; font-size:14px; color:#d4c4a8; margin-bottom:8px; }
-  .field label .required { color:#c0392b; }
+  /* 游戏卡片 */
+  .game-cards { display:flex; gap:16px; flex-wrap:wrap; }
+  .game-card { flex:1; min-width:240px; background:#2a1a10; border:1px solid #4a3a2a; 
+    border-radius:12px; padding:24px; text-align:center; cursor:pointer; 
+    transition:all .3s; text-decoration:none; color:inherit; display:block; }
+  .game-card:hover { border-color:#c9a84c; transform:translateY(-2px); }
+  .game-card .icon { font-size:48px; margin-bottom:12px; }
+  .game-card h3 { font-size:18px; color:#c9a84c; margin-bottom:8px; }
+  .game-card p { font-size:13px; color:#8a7555; line-height:1.6; }
+  .game-card .btn { display:inline-block; margin-top:16px; padding:10px 32px; 
+    background:linear-gradient(135deg,#c9a84c,#e8c84c); color:#1a0a0a; 
+    border-radius:24px; font-size:14px; font-weight:bold; }
   
-  input[type="text"], input[type="number"], textarea, select {
-    width:100%; padding:12px; border-radius:8px; border:1px solid #4a3a2a;
-    background:#1f1111; color:#e8d5b7; font-size:15px; outline:none; font-family:inherit;
-  }
-  textarea { resize:vertical; min-height:60px; }
-  input:focus, textarea:focus, select:focus { border-color:#c9a84c; }
+  /* 问卷嵌入 */
+  .form-embed { background:#2a1a10; border:1px solid #4a3a2a; border-radius:12px; 
+    padding:16px; margin-top:16px; }
+  .form-embed iframe { width:100%; height:1200px; border:none; border-radius:8px; }
   
-  .radio-group { display:flex; flex-wrap:wrap; gap:8px; }
-  .radio-group label.opt { 
-    padding:8px 16px; border-radius:20px; border:1px solid #4a3a2a; 
-    background:#1f1111; font-size:14px; cursor:pointer; transition:all .2s; user-select:none;
-  }
-  .radio-group input[type="radio"] { display:none; }
-  .radio-group input[type="radio"]:checked + span { color:#c9a84c; font-weight:bold; }
-  .radio-group label.opt:has(input:checked) { border-color:#c9a84c; background:#2a1a10; }
+  .tips { background:#2a1a10; border-left:3px solid #c9a84c; border-radius:0 8px 8px 0;
+    padding:16px; margin:24px 0; font-size:13px; color:#d4c4a8; line-height:1.8; }
+  .tips strong { color:#c9a84c; }
   
-  .stars { display:flex; gap:4px; font-size:28px; cursor:pointer; }
-  .stars span { color:#4a3a2a; transition:color .2s; }
-  .stars span.active, .stars span:hover { color:#c9a84c; }
-  
-  .checkbox-item { display:flex; align-items:flex-start; gap:8px; padding:8px 0; }
-  .checkbox-item input[type="checkbox"] { margin-top:2px; accent-color:#c9a84c; transform:scale(1.2); }
-  .checkbox-item span { font-size:14px; color:#d4c4a8; }
-  
-  .btn-submit { 
-    display:block; width:100%; padding:16px; border-radius:12px;
-    background:linear-gradient(135deg,#8b0000,#c0392b); color:#f0e0c0;
-    font-size:18px; font-weight:bold; border:none; cursor:pointer;
-    letter-spacing:4px; transition:all .3s;
-  }
-  .btn-submit:hover { background:linear-gradient(135deg,#a00000,#d44); transform:translateY(-1px); }
-  .btn-submit:active { transform:scale(.98); }
-  
-  .thanks { 
-    display:none; text-align:center; padding:40px 20px;
-    background:#2a1a10; border-radius:12px; margin-top:20px;
-  }
-  .thanks h2 { color:#c9a84c; font-size:24px; margin-bottom:12px; }
-  .thanks p { color:#8a7555; }
-  
-  .survey-intro { background:#2a1a10; border-radius:12px; padding:20px; margin-bottom:24px; 
-    border:1px solid #4a3a2a; line-height:1.8; font-size:14px; color:#d4c4a8; }
-  
-  @media (max-width:400px) {
+  @media (max-width:500px) {
     .header h1 { font-size:24px; }
-    .radio-group label.opt { padding:6px 12px; font-size:13px; }
+    .game-cards { flex-direction:column; }
   }
 </style>
 </head>
 <body>
 
-<!-- 顶部导航 -->
-<div class="top-nav">
-  <a onclick="showGame()" class="active" id="nav-game">🎮 先玩游戏</a>
-  <a onclick="showSurvey()">📝 填反馈</a>
-</div>
-
-<!-- 游戏区域 -->
-<div id="game-section">
-  <iframe id="gameFrame" class="game-frame" src="index.html"></iframe>
-</div>
-
-<!-- 问卷区域 -->
-<div id="survey-section">
+<div class="container">
+  
   <div class="header">
     <h1>🎭 梨园消消</h1>
-    <div class="sub">内测反馈问卷 · 预计3分钟</div>
+    <div class="sub">内测反馈 · 先玩游戏，再填问卷</div>
   </div>
   
-  <div class="survey-intro">
-    <strong>👋 感谢试玩！</strong><br>
-    请您花3分钟填一下反馈，帮助我把游戏做得更好玩。<br>
-    所有问题都没有标准答案，真实感受最重要。
+  <div class="section-title">🎮 第一步：试玩游戏</div>
+  
+  <div class="tips">
+    <strong>💡 内测说明</strong><br>
+    · 游戏目前有<strong>普通模式</strong>和<strong>难度模式</strong>（第5关起有冻结格）<br>
+    · 建议两种模式都试玩几关，体验更完整<br>
+    · 游戏在手机浏览器中体验最佳
   </div>
   
-  <form id="surveyForm">
-    
-    <!-- 基本信息 -->
-    <div class="section">
-      <div class="section-title">一、基本信息</div>
-      
-      <div class="field">
-        <label>你的昵称 <span class="required">*</span></label>
-        <input type="text" name="nickname" placeholder="随便填，方便我认出你就行" required>
-      </div>
-      
-      <div class="field">
-        <label>平时玩游戏多吗？</label>
-        <div class="radio-group" data-name="gameFreq">
-          <label class="opt"><input type="radio" name="gameFreq" value="很少"><span>几乎不玩</span></label>
-          <label class="opt"><input type="radio" name="gameFreq" value="偶尔"><span>偶尔消遣</span></label>
-          <label class="opt"><input type="radio" name="gameFreq" value="经常"><span>经常玩手游</span></label>
-          <label class="opt"><input type="radio" name="gameFreq" value="重度"><span>资深玩家</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>玩到了第几关？</label>
-        <input type="number" name="maxLevel" placeholder="填数字，如 3" min="1" max="15">
-      </div>
-    </div>
-    
-    <!-- 新手体验 -->
-    <div class="section">
-      <div class="section-title">二、上手体验</div>
-      
-      <div class="field">
-        <label>一打开游戏，知道要干什么吗？</label>
-        <div class="radio-group" data-name="onboarding">
-          <label class="opt"><input type="radio" name="onboarding" value="秒懂"><span>秒懂，不用教</span></label>
-          <label class="opt"><input type="radio" name="onboarding" value="试了几下"><span>试了几下才明白</span></label>
-          <label class="opt"><input type="radio" name="onboarding" value="懵"><span>懵了好一阵</span></label>
-          <label class="opt"><input type="radio" name="onboarding" value="看了别人"><span>要别人教才行</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>拖拽交换脸谱顺不顺手？（手机版）</label>
-        <div class="radio-group" data-name="drag">
-          <label class="opt"><input type="radio" name="drag" value="很顺"><span>很顺手</span></label>
-          <label class="opt"><input type="radio" name="drag" value="还行"><span>还行</span></label>
-          <label class="opt"><input type="radio" name="drag" value="有点别扭"><span>有点别扭</span></label>
-          <label class="opt"><input type="radio" name="drag" value="很难拖"><span>很难拖，经常误触</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>哪里让你卡住了或搞不懂？（可多选）</label>
-        <div class="checkbox-item"><input type="checkbox" name="confused" value="消除规则"><span>怎么才算消除（三个连一起？）</span></div>
-        <div class="checkbox-item"><input type="checkbox" name="confused" value="五种脸谱"><span>生旦净末丑五个脸谱分不清</span></div>
-        <div class="checkbox-item"><input type="checkbox" name="confused" value="步数"><span>步数是干什么的</span></div>
-        <div class="checkbox-item"><input type="checkbox" name="confused" value="能量"><span>锣鼓能量条看不懂</span></div>
-        <div class="checkbox-item"><input type="checkbox" name="confused" value="技能"><span>五个技能不知道怎么用</span></div>
-        <div class="checkbox-item"><input type="checkbox" name="confused" value="目标"><span>"还需消除"那个数字是啥</span></div>
-        <div class="checkbox-item"><input type="checkbox" name="confused" value="知识卡"><span>通关后那个知识卡</span></div>
-      </div>
-    </div>
-    
-    <!-- 难度 -->
-    <div class="section">
-      <div class="section-title">三、难度与节奏</div>
-      
-      <div class="field">
-        <label>整体难度感觉如何？</label>
-        <div class="radio-group" data-name="difficulty">
-          <label class="opt"><input type="radio" name="difficulty" value="太简单"><span>太简单了</span></label>
-          <label class="opt"><input type="radio" name="difficulty" value="刚刚好"><span>刚刚好</span></label>
-          <label class="opt"><input type="radio" name="difficulty" value="有点难"><span>有点难</span></label>
-          <label class="opt"><input type="radio" name="difficulty" value="太难"><span>太难，想弃坑</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>每关通关时间大概多久？</label>
-        <div class="radio-group" data-name="levelTime">
-          <label class="opt"><input type="radio" name="levelTime" value="1分钟内"><span>1分钟以内</span></label>
-          <label class="opt"><input type="radio" name="levelTime" value="1-2分钟"><span>1-2分钟</span></label>
-          <label class="opt"><input type="radio" name="levelTime" value="2-5分钟"><span>2-5分钟</span></label>
-          <label class="opt"><input type="radio" name="levelTime" value="5分钟以上"><span>5分钟以上</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>从第几关开始感觉明显变难了？</label>
-        <input type="number" name="hardLevel" placeholder="填数字，如 4；没感觉变化就不填" min="2" max="15">
-      </div>
-    </div>
-    
-    <!-- 技能系统 -->
-    <div class="section">
-      <div class="section-title">四、技能与能量</div>
-      
-      <div class="field">
-        <label>五个技能中，哪个你最常用？</label>
-        <div class="radio-group" data-name="favSkill">
-          <label class="opt"><input type="radio" name="favSkill" value="生"><span>生（清一行）</span></label>
-          <label class="opt"><input type="radio" name="favSkill" value="旦"><span>旦（清一列）</span></label>
-          <label class="opt"><input type="radio" name="favSkill" value="净"><span>净（炸一片）</span></label>
-          <label class="opt"><input type="radio" name="favSkill" value="末"><span>末（+5步）</span></label>
-          <label class="opt"><input type="radio" name="favSkill" value="丑"><span>丑（重排）</span></label>
-          <label class="opt"><input type="radio" name="favSkill" value="没用过"><span>没用过技能</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>能量攒得合理吗？</label>
-        <div class="radio-group" data-name="energy">
-          <label class="opt"><input type="radio" name="energy" value="太快"><span>攒太快，技能随便用</span></label>
-          <label class="opt"><input type="radio" name="energy" value="刚好"><span>刚好，有策略感</span></label>
-          <label class="opt"><input type="radio" name="energy" value="太慢"><span>攒太慢，舍不得用</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>"取消技能"按钮你用过吗？</label>
-        <div class="radio-group" data-name="cancelSkill">
-          <label class="opt"><input type="radio" name="cancelSkill" value="用过"><span>用过，误点技能时取消</span></label>
-          <label class="opt"><input type="radio" name="cancelSkill" value="知道但没用"><span>知道有，但没用过</span></label>
-          <label class="opt"><input type="radio" name="cancelSkill" value="不知道"><span>不知道有这功能</span></label>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Bug -->
-    <div class="section">
-      <div class="section-title">五、遇到问题了吗？</div>
-      
-      <div class="field">
-        <label>遇到过什么 Bug 或奇怪的地方？</label>
-        <textarea name="bugs" placeholder="比如：棋子卡住不动、步数不对、画面重叠、闪退……描述越详细越好"></textarea>
-      </div>
-      
-      <div class="field">
-        <label>手机/设备型号（方便复现Bug）</label>
-        <input type="text" name="device" placeholder="如 iPhone 15 / 小米14 / 华为Mate60">
-      </div>
-    </div>
-    
-    <!-- 广告 -->
-    <div class="section">
-      <div class="section-title">六、广告接受度</div>
-      
-      <div class="field">
-        <label>如果"看广告免费重排"，你愿意点吗？</label>
-        <div class="radio-group" data-name="adReshuffle">
-          <label class="opt"><input type="radio" name="adReshuffle" value="愿意"><span>愿意，反正不花钱</span></label>
-          <label class="opt"><input type="radio" name="adReshuffle" value="偶尔"><span>偶尔可以，多了烦</span></label>
-          <label class="opt"><input type="radio" name="adReshuffle" value="不愿意"><span>不愿意，宁可不用</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>通关后弹一个广告，你能接受吗？</label>
-        <div class="radio-group" data-name="adInterstitial">
-          <label class="opt"><input type="radio" name="adInterstitial" value="能"><span>能接受，关卡之间很正常</span></label>
-          <label class="opt"><input type="radio" name="adInterstitial" value="勉强"><span>勉强接受，别太频繁</span></label>
-          <label class="opt"><input type="radio" name="adInterstitial" value="不能"><span>不能接受，影响体验</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>棋盘底部常驻一条小广告条，你觉得？</label>
-        <div class="radio-group" data-name="adBanner">
-          <label class="opt"><input type="radio" name="adBanner" value="无所谓"><span>无所谓，不挡操作就行</span></label>
-          <label class="opt"><input type="radio" name="adBanner" value="有点烦"><span>有点烦但能忍</span></label>
-          <label class="opt"><input type="radio" name="adBanner" value="受不了"><span>受不了，太碍眼</span></label>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 总评 -->
-    <div class="section">
-      <div class="section-title">七、总体评价</div>
-      
-      <div class="field">
-        <label>给这个游戏打几星？</label>
-        <div class="stars" id="starRating">
-          <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
-        </div>
-        <input type="hidden" name="rating" value="0">
-      </div>
-      
-      <div class="field">
-        <label>你会推荐给朋友玩吗？</label>
-        <div class="radio-group" data-name="recommend">
-          <label class="opt"><input type="radio" name="recommend" value="会"><span>会！好玩</span></label>
-          <label class="opt"><input type="radio" name="recommend" value="可能会"><span>可能会</span></label>
-          <label class="opt"><input type="radio" name="recommend" value="不会"><span>不会</span></label>
-        </div>
-      </div>
-      
-      <div class="field">
-        <label>还有什么想说的？（吐槽、建议、想法都行）</label>
-        <textarea name="feedback" placeholder="随便说，越真实越好"></textarea>
-      </div>
-    </div>
-    
-    <button type="submit" class="btn-submit">提 交 反 馈</button>
-  </form>
-  
-  <div class="thanks" id="thanksMsg">
-    <h2>🙏 感谢反馈！</h2>
-    <p>你的意见对游戏改进很有帮助</p>
-    <p style="margin-top:16px; font-size:14px; color:#8a7555;">
-      <a onclick="showGame()" style="color:#c9a84c; cursor:pointer;">← 返回继续玩</a>
-    </p>
+  <div class="game-cards">
+    <a class="game-card" href="https://yongzhoulaoxie59.github.io/liyuan-xiaoxiao/normal.html" target="_blank">
+      <div class="icon">😊</div>
+      <h3>普通模式</h3>
+      <p>无冻结格<br>适合新手体验</p>
+      <div class="btn">开始游戏</div>
+    </a>
+    <a class="game-card" href="https://yongzhoulaoxie59.github.io/liyuan-xiaoxiao/hard.html" target="_blank">
+      <div class="icon">🔥</div>
+      <h3>难度模式</h3>
+      <p>第5关起有冻结格<br>适合挑战自我</p>
+      <div class="btn">开始游戏</div>
+    </a>
   </div>
+  
+  <div class="section-title">📝 第二步：填写反馈</div>
+  
+  <div class="tips">
+    <strong>🙏 感谢你的反馈！</strong><br>
+    · 问卷预计<strong>3分钟</strong>填完<br>
+    · 可以跳过不了解的问题<br>
+    · 你的意见对游戏改进非常重要
+  </div>
+  
+  <div class="form-embed">
+    <iframe src="https://docs.qq.com/form/page/DY05WRW9PSWJ5UUhB"></iframe>
+  </div>
+  
+  <div style="text-align:center; margin-top:32px; font-size:13px; color:#5a4a3a;">
+    梨园消消 · 内测版 · 2025
+  </div>
+  
 </div>
 
-<script>
-// 切换游戏/问卷视图
-function showGame() {
-  document.getElementById('game-section').style.display = 'block';
-  document.getElementById('survey-section').style.display = 'none';
-  document.getElementById('nav-game').classList.add('active');
-  document.querySelectorAll('.top-nav a')[1].classList.remove('active');
-}
-
-function showSurvey() {
-  document.getElementById('game-section').style.display = 'none';
-  document.getElementById('survey-section').style.display = 'block';
-  document.getElementById('nav-game').classList.remove('active');
-  document.querySelectorAll('.top-nav a')[1].classList.add('active');
-  window.scrollTo({ top:0, behavior:'smooth' });
-}
-
-// 星级评分
-document.getElementById('starRating').addEventListener('click', function(e) {
-  if (e.target.dataset.val) {
-    var v = parseInt(e.target.dataset.val);
-    document.querySelector('input[name="rating"]').value = v;
-    this.querySelectorAll('span').forEach(function(s, i) {
-      s.classList.toggle('active', i < v);
-    });
-  }
-});
-
-// 表单提交
-document.getElementById('surveyForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  var fd = new FormData(this);
-  var data = {};
-  fd.forEach(function(v, k) {
-    if (data[k]) {
-      if (!Array.isArray(data[k])) data[k] = [data[k]];
-      data[k].push(v);
-    } else {
-      data[k] = v;
-    }
-  });
-  var checks = this.querySelectorAll('input[name="confused"]:checked');
-  if (checks.length) {
-    data.confused = Array.from(checks).map(function(c) { return c.value; });
-  }
-  
-  // 格式化为邮件内容
-  var lines = ['梨园消消内测反馈', '==================', ''];
-  lines.push('昵称：' + (data.nickname || '匿名'));
-  lines.push('游戏频率：' + (data.gameFreq || '未填'));
-  lines.push('玩到关卡：' + (data.maxLevel || '未填'));
-  lines.push('上手体验：' + (data.onboarding || '未填'));
-  lines.push('拖拽手感：' + (data.drag || '未填'));
-  lines.push('困惑点：' + (Array.isArray(data.confused) ? data.confused.join('、') : (data.confused || '无')));
-  lines.push('难度感受：' + (data.difficulty || '未填'));
-  lines.push('通关时长：' + (data.levelTime || '未填'));
-  lines.push('常用技能：' + (data.favSkill || '未填'));
-  lines.push('能量感受：' + (data.energy || '未填'));
-  lines.push('Bug描述：' + (data.bugs || '无'));
-  lines.push('设备型号：' + (data.device || '未填'));
-  lines.push('广告接受度（重排）：' + (data.adReshuffle || '未填'));
-  lines.push('广告接受度（插屏）：' + (data.adInterstitial || '未填'));
-  lines.push('广告接受度（横幅）：' + (data.adBanner || '未填'));
-  lines.push('星级评分：' + (data.rating || '0') + '星');
-  lines.push('推荐意愿：' + (data.recommend || '未填'));
-  lines.push('建议反馈：' + (data.feedback || '无'));
-  lines.push('');
-  lines.push('提交时间：' + new Date().toLocaleString('zh-CN'));
-  
-  var body = lines.join('\n');
-  var subject = '梨园消消内测反馈 - ' + (data.nickname || '匿名');
-  var mailto = 'mailto:haiqingxie@163.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  
-  // 尝试打开邮件客户端（如果失败了，至少显示感谢信息）
-  try {
-    window.location.href = mailto;
-  } catch(err) {
-    // 如果mailto失败，复制到剪贴板作为备选
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(body).then(function() {
-        alert('邮件客户端未配置。反馈内容已复制到剪贴板，请粘贴到邮件发送给我（haiqingxie@163.com）');
-      });
-    }
-  }
-  
-  this.style.display = 'none';
-  document.getElementById('thanksMsg').style.display = 'block';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-</script>
 </body>
 </html>
