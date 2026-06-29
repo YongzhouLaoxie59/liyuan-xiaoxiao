@@ -2464,7 +2464,7 @@ function selectSkill(skill) {
   initAudio(); selectedSkill=skill; sfxSelect();
   document.querySelectorAll('.skill-btn').forEach(function(b){b.classList.remove('skill-selected');});
   document.querySelector('[data-skill="'+skill+'"]').classList.add('skill-selected');
-  var msgs={sheng:'点击一行，横扫千军！',dan:'点击一列，水袖轻拂！',jing:'点击棋盘，花脸震天！',mo:'点兵点将，步数+5！',chou:'丑角登场，乱中求变！'};
+  var msgs={sheng:'点击一行，横扫千军！',dan:'点击一列，水袖轻拂！',jing:'点击棋盘，花脸震天！',mo:'点兵点将，步数无限！',chou:'丑角登场，乱中求变！'};
   showMessage(msgs[skill]);
 }
 
